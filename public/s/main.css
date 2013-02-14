@@ -1,0 +1,98 @@
+body {
+	overflow: hidden;
+	font-family: Verdana;
+	color: #DDD;
+}
+
+a, a:visited, a:focus {
+	outline: 0;
+	color: #AAA;
+	text-decoration: none;
+}
+
+.d a, .d a:visited, .d a:focus {
+	color: #BABABA;
+}
+
+.d, .c {
+	height: 100%;
+	min-height: 320px;
+}
+
+.d {
+	background: #888;
+	float: left;
+	width: 65%;
+	overflow: auto;
+}
+
+.d-inner {
+	padding: 0.67em;
+}
+
+.d-comments {
+	list-style: none;
+	margin: 2em;
+	padding: 0;
+}
+
+.d-comments img {
+	max-width: 100%;
+}
+
+.d-comments-comment {
+	padding-bottom: 1em;
+}
+
+.d-comments-comment-text {
+	font-size: 0.8em;
+}
+
+.d-comments-comment-header {
+	font-size: 0.67em;
+	color: #BBB;
+}
+
+.d-comments-comment-author {
+	float: left;
+	margin-right: 1em;
+}
+
+.d-comments-comment-text p {
+	margin: 0;
+}
+
+.c {
+	background: #444;
+	overflow: hidden;
+	min-width: 320px;
+	padding-left: 1em;
+	box-shadow: inset 10px 0 20px rgba(0, 0, 0, .4);
+}
+
+.c-header {
+	width: 100%;
+	text-align: middle;
+}
+
+.c-filter-list {
+	padding-left: 2em;
+	margin-bottom: 2em;
+	list-style: none;
+}
+
+.c-filter-list li {
+	display: inline;
+}
+
+.c-issues-list {
+	list-style: none;
+	padding-left: 0;
+	width: 100%;
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
+.selected, .active {
+	color: #AAE !important;
+}
