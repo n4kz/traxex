@@ -154,7 +154,7 @@ Alleria->focus('message::command' => sub {
 			$vermishel->setLink({
 				messageA => $id,
 				messageB => $types->{'open'},
-			}) if $issue;
+			}) unless $issue;
 
 			# Send message to author
 			message join ' created with id #', $issue? 'Comment' : 'Issue', $id;
@@ -189,15 +189,13 @@ Alleria->focus('message::command' => sub {
 				if $response->{'result'}{'meta'}{'type'} ne 'issue';
 
 			# Unset all possible types
-			# if ($response->{'result'}{'linked'}) {
-				foreach (keys %$types) {
-					# TODO: Check reponse
-					$vermishel->unsetLink({
-						messageA => $issue,
-						messageB => $types->{$_},
-					});
-				}
-			#}
+			foreach (keys %$types) {
+				# TODO: Check reponse
+				$vermishel->unsetLink({
+					messageA => $issue,
+					messageB => $types->{$_},
+				});
+			}
 
 			# Set desired type
 			($response) = $vermishel->setLink({
@@ -208,6 +206,7 @@ Alleria->focus('message::command' => sub {
 			return message 'Got error for your request '. $response->{'error'}{'message'}
 				if $response->{'error'};
 
+			# Create comment
 			($response) = $vermishel->createMessage({
 				stream  => $config->{'stream'},
 				body    => "Marked as $type",
@@ -239,39 +238,48 @@ Alleria->focus('message::command' => sub {
 		}
 
 		when ('show') {
-			my (@issues, $response);
+			my (@results, $response, $issue);
 
 			$args = 'open'
 				unless $args;
-			
-			if ($args =~ m{^\d+$}) {
-				($response) = $vermishel->getMessage({ message => $args });
 
-				return message 'Got error for your request '. $response->{'error'}{'message'}
-					if $response->{'error'};
-
-				@issues = $response->{'result'};
-			} else {
-				return message 'Unsupported type '. $args
-					unless exists $types->{$args};
-
-				do {
-					($response) = $vermishel->getLinkStream({ message => $types->{$args} });
+			given ($args) {
+				when (m{^\d+$}) {
+					($response) = $vermishel->getMessage({ message => $args });
 
 					return message 'Got error for your request '. $response->{'error'}{'message'}
 						if $response->{'error'};
 
-					last unless push @issues, @{ $response->{'result'}{'stream'} };
+					@results = $response->{'result'};
+				}
 
-				# TODO: move to config
-				} while not @issues % 50;
+				$issue = $1 and continue
+					when m{^comments +(.*)};
+
+				default {
+					return message 'Unsupported type '. $args
+						unless $issue or exists $types->{$args};
+
+					do {
+						($response) = $vermishel->getLinkStream({ message => $issue || $types->{$args} });
+
+						return message 'Got error for your request '. $response->{'error'}{'message'}
+							if $response->{'error'};
+
+						last unless push @results, @{ $response->{'result'}{'stream'} };
+
+					# TODO: move to config
+					} while not @results % 50;
+				}
 			}
 
 			message join "\n", '', map {
 				sprintf '#%i (%i) %s', grep {
 					s{</?\w+.*?>} {}ig or 1
 				} @{ $_ }{qw{ id linked body }}
-			} @issues;
+			} grep {
+				not $issue or $_->{'meta'}{'type'} eq 'comment'
+			} reverse @results;
 		}
 
 		#when ('auth') {
