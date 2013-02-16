@@ -48,13 +48,15 @@ a, a:visited, a:focus {
 	font-size: 0.8em;
 }
 
-.d-comments-comment-header {
+.d-comments-comment-author,
+.d-comments-comment-time,
+.d-header-author,
+.d-header-time {
 	font-size: 0.67em;
 	color: #BBB;
 }
 
 .d-comments-comment-author {
-	float: left;
 	margin-right: 1em;
 }
 
@@ -64,7 +66,7 @@ a, a:visited, a:focus {
 
 .c {
 	background: #444;
-	overflow: hidden;
+	overflow: auto;
 	min-width: 320px;
 	padding-left: 1em;
 	box-shadow: inset 10px 0 20px rgba(0, 0, 0, .4);

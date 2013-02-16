@@ -12,6 +12,7 @@
 		header       : '.d-header'
 		headerNumber : '.d-header-number'
 		headerName   : '.d-header-name'
+		headerAuthor : '.d-header-author'
 		headerTime   : '.d-header-time'
 		comments     : '.d-comments'
 		comment      : '.d-comments-comment'
@@ -102,7 +103,8 @@
 
 		header.find(@_.headerName).html(getName(issue))
 		header.find(@_.headerNumber).html(getNumber(issue))
-		#header.find(@_.headerTime).html(getTime(issue))
+		header.find(@_.headerAuthor).text(issue.meta.author.name)
+		header.find(@_.headerTime).text(getTime(issue))
 
 		@comments.clone()
 			.appendTo(@inner)

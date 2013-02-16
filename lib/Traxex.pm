@@ -83,7 +83,7 @@ Alleria->load('commands')->commands({
 	},
 
 	show => {
-		arguments   => join($typehelp, '[<id>|<', '>]'),
+		arguments   => join($typehelp, '[<id> | <', '> | comments <id>]'),
 		description => 'Show all open issues, issue/comment by id or issues by type',
 	},
 
