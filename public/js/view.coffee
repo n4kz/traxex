@@ -26,16 +26,16 @@
 
 	setup: ->
 		@issue = $(@_.templates + @_.issue)
-			.detach()
+			.remove()
 
 		@header = $(@_.templates + @_.header)
-			.detach()
+			.remove()
 
 		@comment = $(@_.templates + @_.comment)
-			.detach()
+			.remove()
 
 		@comments = $(@_.templates + @_.comments)
-			.detach()
+			.remove()
 
 		@issues = $(@_.templates + @_.issues)
 			.appendTo($(@_.control))

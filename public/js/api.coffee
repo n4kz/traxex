@@ -5,18 +5,23 @@ call = (method, options, callback) ->
 	options.stream = 'traxex'
 
 	$.ajax
-		url  : '//traxex.n4kz.com/_?method=' + method
-		type : 'POST'
-		data :  options
-	.error ->
-		callback
-			error:
-				code    : '100'
-				message : 'Internal error'
-	.success (data) ->
-		callback(data.error, data.result)
+		url     : '/_?method=' + method
+		type    : 'POST'
+		data    : options
+
+		success : (data) ->
+			callback(data.error, data.result)
+
+		error   : ->
+			callback
+				error:
+					code    : '100'
+					message : 'Internal error'
 
 	null
 
 for method in ['getTagStream', 'getLinkStream', 'getTagMark', 'getLinkMark', 'getMark']
-	Traxex[method] = call.bind(null, method)
+	((method) ->
+		Traxex[method] = ->
+			call.apply(null, [method].concat(Array.prototype.slice.call(arguments)))
+	)(method)

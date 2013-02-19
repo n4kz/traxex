@@ -14,7 +14,9 @@ $ ->
 
 					Traxex.view.update()
 
-		setTimeout(Traxex.model.check.bind(Traxex.model, update), 20000)
+		setTimeout((->
+			Traxex.model.check(update)
+		), 20000)
 
 	# Setup model
 	Traxex.model.setup ->
