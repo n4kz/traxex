@@ -75,8 +75,15 @@
 			.filter("[data-action=\"render:#{type}\"]")
 			.addClass('selected')
 
-		# TODO: sort
+		issues = []
+
 		for own id, issue of Traxex.model.issues when type is 'all' or issue[type]
+			issues.push(issue)
+
+		issues = issues.sort (a, b) ->
+			`a.id > b.id? -1 : (b.id > a.id? 1 : 0)`
+
+		for issue in issues
 			node = @issue
 				.clone()
 				.appendTo(@issues)
