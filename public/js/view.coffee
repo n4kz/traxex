@@ -6,6 +6,7 @@
 		filters      : '.c-filter-list'
 		issues       : '.c-issues-list'
 		issue        : '.c-issues-issue'
+		issueN       : '.c-issues-issue-'
 		issueNumber  : '.c-issues-issue-number'
 		issueName    : '.c-issues-issue-name'
 		inner        : '.d-inner'
@@ -88,6 +89,11 @@
 				.clone()
 				.appendTo(@issues)
 
+			if issue.id is @current
+				node.addClass('selected')
+
+			node.addClass(@_.issueN.slice(1) + issue.id)
+
 			node.find(@_.issueName).html(getName(issue))
 			node.find(@_.issueNumber).html(getNumber(issue))
 
@@ -103,10 +109,16 @@
 		@clear()
 		return unless issue
 
-		@current = location.hash = id
+		@current = location.hash = Number(id)
 
 		header = @header.clone()
 			.appendTo(@inner)
+
+		@issues
+			.children()
+			.removeClass('selected')
+			.filter(@_.issueN + id)
+			.addClass('selected')
 
 		header.find(@_.headerName).html(getName(issue))
 		header.find(@_.headerNumber).html(getNumber(issue))
