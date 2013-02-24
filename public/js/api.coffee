@@ -5,9 +5,10 @@ call = (method, options, callback) ->
 	options.stream = 'traxex'
 
 	$.ajax
-		url     : '/_?method=' + method
-		type    : 'POST'
-		data    : options
+		url      : '/_?method=' + method
+		type     : 'POST'
+		data     : options
+		dataType : 'json'
 
 		success : (data) ->
 			callback(data.error, data.result)
