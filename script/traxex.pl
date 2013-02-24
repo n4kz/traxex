@@ -4,14 +4,16 @@ use Alleria;
 use Alleria::Core 'strict';
 
 my %options;
-GetOptions(\%options, 'daemon', 'logfile=s', 'password=s');
+GetOptions(\%options, 'daemon', 'logfile=s');
+
+my $xmpp = do 'xmpp.conf';
 
 my $bot = Alleria->new(
 	logfile  => $options{'logfile'}  || 'traxex.log',
-	password => $options{'password'} || do 'password.conf',
-	host     => 'n4kz.com',
-	username => 'traxex',
-	resource => 'vermishel',
+	password => $xmpp->{'password'},
+	host     => $xmpp->{'host'},
+	username => $xmpp->{'username'},
+	resource => $xmpp->{'resource'},
 	tls      => 1,
 );
 
