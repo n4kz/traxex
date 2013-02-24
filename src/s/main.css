@@ -4,17 +4,22 @@ body {
 	color: #DDD;
 }
 
-a, a:visited, a:focus {
+a,
+a:visited,
+a:focus {
 	outline: 0;
 	color: #AAA;
 	text-decoration: none;
 }
 
-.d a, .d a:visited, .d a:focus {
+.d a,
+.d a:visited,
+.d a:focus {
 	color: #BABABA;
 }
 
-.d, .c {
+.d,
+.c {
 	height: 100%;
 	min-height: 320px;
 }
@@ -56,7 +61,8 @@ a, a:visited, a:focus {
 	color: #BBB;
 }
 
-.d-comments-comment-author {
+.d-comments-comment-author,
+.d-header-author {
 	margin-right: 1em;
 }
 
@@ -95,6 +101,12 @@ a, a:visited, a:focus {
 	overflow-y: auto;
 }
 
-.selected, .active {
+.c-issues-issue-number,
+.d-header-number {
+	margin-right: 0.33em;
+}
+
+.selected,
+.active {
 	color: #AAE !important;
 }

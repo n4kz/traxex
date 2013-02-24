@@ -1,7 +1,7 @@
 *.swp
 *.log
-public/js/*.js
-public/s/traxex.css
+src/js/*.js
+public/index.html
 vermishel
 vermishel.json
 weaver.json

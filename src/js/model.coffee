@@ -1,20 +1,27 @@
 Traxex = @Traxex
-# TODO: check for errors
+
 Traxex.model =
-	synced   : 0
-	offset   : 50
-	types    : {}
-	issues   : {}
-	comments : {}
-	ready    : no
+	synced: 0
+	offset: 50
+	types: {}
+	issues: {}
+	comments: {}
+	ready: no
 
 	setup: (callback) ->
-		Traxex.getTagStream tag: ':type', (error, result) =>
-			for type in result.stream
-				@types[type.body] = type.id
+		Traxex.getConfig null, (error, result) =>
+			throw new Error(error.message) if error
 
-			@ready = yes
-			callback()
+			Traxex.config = result.config
+
+			Traxex.getTagStream tag: ':type', (error, result) =>
+				throw new Error(error.message) if error
+
+				for type in result.stream
+					@types[type.body] = type.id
+
+				@ready = yes
+				callback()
 
 	check: (callback) ->
 		Traxex.getMark {}, (error, result) =>
@@ -67,4 +74,3 @@ Traxex.model =
 				@fetchComments id, result.stream[result.stream.length - 1].time, callback
 			else
 				callback()
-
