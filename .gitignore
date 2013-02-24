@@ -3,5 +3,7 @@
 public/js/*.js
 public/s/traxex.css
 vermishel
+vermishel.json
+weaver.json
 xmpp.conf
 access.conf
