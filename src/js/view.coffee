@@ -1,44 +1,20 @@
 @Traxex.view =
 	_:
 		data         : '.d '
-		templates    : '.t '
 		control      : '.c '
 		filters      : '.c-filter-list'
 		issues       : '.c-issues-list'
-		issue        : '.c-issues-issue'
 		issueN       : '.c-issues-issue-'
-		issueNumber  : '.c-issues-issue-number'
-		issueName    : '.c-issues-issue-name'
 		inner        : '.d-inner'
 		header       : '.d-header'
-		headerNumber : '.d-header-number'
-		headerName   : '.d-header-name'
-		headerAuthor : '.d-header-author'
-		headerTime   : '.d-header-time'
 		comments     : '.d-comments'
-		comment      : '.d-comments-comment'
-		text         : '.d-comments-comment-text'
-		author       : '.d-comments-comment-author'
-		time         : '.d-comments-comment-time'
 
 	ready: no
 	filter: 'open'
 	current: 0
 
 	setup: ->
-		@issue = $(@_.templates + @_.issue)
-			.remove()
-
-		@header = $(@_.templates + @_.header)
-			.remove()
-
-		@comment = $(@_.templates + @_.comment)
-			.remove()
-
-		@comments = $(@_.templates + @_.comments)
-			.remove()
-
-		@issues = $(@_.templates + @_.issues)
+		@issues = $('<ul class=c-issues-list></ul>')
 			.appendTo($(@_.control))
 
 		@filters = $(@_.filters)
@@ -64,7 +40,7 @@
 		@filters.empty()
 
 		for filter in filters
-			@filters.append(getFilter(filter))
+			@filters.append Ulfsaar.filter filter: filter
 
 	render: (type = @filter) ->
 		@setup() unless @ready
@@ -85,17 +61,9 @@
 			`a.id > b.id? -1 : (b.id > a.id? 1 : 0)`
 
 		for issue in issues
-			node = @issue
-				.clone()
-				.appendTo(@issues)
-
-			if issue.id is @current
-				node.addClass('selected')
-
-			node.addClass(@_.issueN.slice(1) + issue.id)
-
-			node.find(@_.issueName).html(getName(issue))
-			node.find(@_.issueNumber).html(getNumber(issue))
+			@issues.append Ulfsaar.issue $.extend issue,
+				selected: issue.id is @current
+				type: @_.issueN.slice(1) + issue.id
 
 	clear: () ->
 		@inner.empty()
@@ -111,56 +79,64 @@
 
 		@current = location.hash = Number(id)
 
-		header = @header.clone()
-			.appendTo(@inner)
-
 		@issues
 			.children()
 			.removeClass('selected')
 			.filter(@_.issueN + id)
 			.addClass('selected')
 
-		header.find(@_.headerName).html(getName(issue))
-		header.find(@_.headerNumber).html(getNumber(issue))
-		header.find(@_.headerAuthor).text(issue.meta.author.name)
-		header.find(@_.headerTime).text(getTime(issue))
-
-		@comments.clone()
-			.appendTo(@inner)
+		@inner.append Ulfsaar.header issue
+		@inner.append Ulfsaar.comments {}
 
 	update: () ->
 		id = @current
+		data = Traxex.model.comments[id]
 		return unless id
-		return unless Traxex.model.comments[id]
+		return unless data
 
-		comments = @inner
+		@inner
 			.find(@_.comments)
-			.empty()
+			.replaceWith Ulfsaar.comments comments: data
 
-		# TODO: sort
-		for data in Traxex.model.comments[id]
-			(comment = @comment.clone())
-				.find(@_.text)
-				.html(data.body)
+Ulfsaar.time = (scope) ->
+	return (new Date(scope('time'))).toLocaleString()
 
-			comment.find(@_.author).text(data.meta.author.name)
-			comment.find(@_.time).text(getTime(data))
-			comment.appendTo(comments)
+Ulfsaar.body = (scope) ->
+	return $(scope('body')).first().html()
 
-getName = (issue) ->
-	$(issue.body)
-		.first()
-		.html()
+Ulfsaar 'number', '<a class=action data-action=open:{{id}} href=#{{id}}>#{{id}}</a>'
 
-getNumber = (issue) ->
-	"""<a class=action data-action=open:#{issue.id} href=##{issue.id}>##{issue.id}</a>"""
+Ulfsaar 'filter', '''
+	<li>
+		<a class=action data-action=render:{{filter}} href=javascript:void(0)>{{filter}}</a>
+	</li>
+'''
 
-getFilter = (filter) ->
-	"""
-		<li>
-			<a class=action data-action=render:#{filter} href=javascript:void(0)>#{filter}</a>
-		</li>
-	"""
+Ulfsaar 'header', '''
+	<div class=d-header>
+		<span class=d-header-number>{{>number}}</span>
+		<span class=d-header-name>{{>body}}</span>
+		<br>
+		<span class=d-header-author>{{meta.author.name}}</span>
+		<span class=d-header-time>{{>time}}</span>
+	</div>
+'''
 
-getTime = (message) ->
-	(new Date(message.time)).toLocaleString()
+Ulfsaar 'comments', '''
+	<ul class=d-comments>
+		{{#comments}}
+			<li class=d-comments-comment>
+				<span class=d-comments-comment-author>{{meta.author.name}}</span>
+				<span class=d-comments-comment-time>{{>time}}</span>
+				<div class=d-comments-comment-text>{{&body}}</div>
+			</li>
+		{{/comments}}
+	</ul>
+'''
+
+Ulfsaar 'issue', '''
+	<li class="c-issues-issue {{type}}{{#selected}} selected{{/selected}}">
+		<span class=c-issues-issue-number>{{>number}}</span>
+		<span class=c-issues-issue-name>{{>body}}</span>
+	</li>
+'''

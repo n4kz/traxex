@@ -4,6 +4,10 @@ body {
 	color: #DDD;
 }
 
+body,html {
+	height: 100%;
+}
+
 a,
 a:visited,
 a:focus {
@@ -73,7 +77,6 @@ a:focus {
 .c {
 	background: #444;
 	overflow: auto;
-	min-width: 320px;
 	padding-left: 1em;
 	box-shadow: inset 10px 0 20px rgba(0, 0, 0, .4);
 }
@@ -91,6 +94,10 @@ a:focus {
 
 .c-filter-list li {
 	display: inline;
+}
+
+.c-filter-list a {
+	margin-right: 0.33em;
 }
 
 .c-issues-list {
