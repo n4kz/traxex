@@ -1,33 +1,47 @@
+container = document.createElement('div')
+
+render = (html) ->
+	container.innerHTML = String(html)
+	return container.childNodes
+
+find = (name, container = document) ->
+	return container.getElementsByClassName(name)
+
+empty = (node) ->
+	node.innerHTML = ''
+
+template = (name, data = {}) ->
+	return render(Ulfsaar[name](data))[0]
+
+each = (name, container, action) ->
+	elements = find(name, container)
+	action.call(element) for element in elements
+
 @Traxex.view =
 	_:
-		data         : '.d '
-		control      : '.c '
-		filters      : '.c-filter-list'
-		issues       : '.c-issues-list'
-		issueN       : '.c-issues-issue-'
-		inner        : '.d-inner'
-		header       : '.d-header'
-		comments     : '.d-comments'
+		control      : 'c'
+		filters      : 'c-filter-list'
+		issueN       : 'c-issues-issue-'
+		inner        : 'd-inner'
+		comments     : 'd-comments'
 
 	ready: no
 	filter: 'open'
 	current: 0
 
 	setup: ->
-		@issues = $('<ul class=c-issues-list></ul>')
-			.appendTo($(@_.control))
+		find(@_.control)[0].appendChild(@issues = render('<ul class=c-issues-list></ul>')[0])
 
-		@filters = $(@_.filters)
-		@inner   = $(@_.inner)
+		@filters = find(@_.filters)[0]
+		@inner   = find(@_.inner)[0]
 
 		@ready = yes
 
 	reset: ->
-		@filters
-			.find('.action')
-			.removeClass('selected')
+		each 'action', @filters, ->
+			@classList.remove('selected')
 
-		@issues.empty()
+		empty(@issues)
 
 	renderFilters: (data) ->
 		@setup() unless @ready
@@ -37,10 +51,10 @@
 		for own key of data
 			filters.unshift(key)
 
-		@filters.empty()
+		empty(@filters)
 
 		for filter in filters
-			@filters.append Ulfsaar.filter filter: filter
+			@filters.appendChild template 'filter', filter: filter
 
 	render: (type = @filter) ->
 		@setup() unless @ready
@@ -48,9 +62,8 @@
 
 		@filter = type
 
-		@filters.find('.action')
-			.filter("[data-action=\"render:#{type}\"]")
-			.addClass('selected')
+		each 'action', @filters, ->
+			@classList.add('selected') if @getAttribute('data-action') is "render:#{type}"
 
 		issues = []
 
@@ -61,12 +74,12 @@
 			`a.id > b.id? -1 : (b.id > a.id? 1 : 0)`
 
 		for issue in issues
-			@issues.append Ulfsaar.issue $.extend issue,
-				selected: issue.id is @current
-				type: @_.issueN.slice(1) + issue.id
+			issue.selected = issue.id is @current
+			issue.type = @_.issueN + issue.id
+			@issues.appendChild template 'issue', issue
 
 	clear: () ->
-		@inner.empty()
+		empty(@inner)
 
 	open: (id) ->
 		return if id and @current is id
@@ -79,14 +92,18 @@
 
 		@current = location.hash = Number(id)
 
-		@issues
-			.children()
-			.removeClass('selected')
-			.filter(@_.issueN + id)
-			.addClass('selected')
+		issues = @issues.childNodes
 
-		@inner.append Ulfsaar.header issue
-		@inner.append Ulfsaar.comments {}
+		for element in issues
+			list = element.classList
+
+			if list.contains(@_.issueN + id)
+				list.add('selected')
+			else
+				list.remove('selected')
+
+		@inner.appendChild(template('header', issue))
+		@inner.appendChild(template('comments'))
 
 	update: () ->
 		id = @current
@@ -94,15 +111,13 @@
 		return unless id
 		return unless data
 
-		@inner
-			.find(@_.comments)
-			.replaceWith Ulfsaar.comments comments: data
+		@inner.replaceChild(template('comments', comments: data), find(@_.comments, @inner)[0])
 
 Ulfsaar.time = (scope) ->
 	return (new Date(scope('time'))).toLocaleString()
 
 Ulfsaar.body = (scope) ->
-	return $(scope('body')).first().html()
+	return render(scope('body'))[0].innerHTML
 
 Ulfsaar 'number', '<a class=action data-action=open:{{id}} href=#{{id}}>#{{id}}</a>'
 

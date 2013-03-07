@@ -1,14 +1,34 @@
 Traxex = @Traxex
 
-call = (method, options, callback) ->
-	options ?= {}
+request = (options) ->
+	r = new XMLHttpRequest()
+	r.open('POST', options.url)
+	r.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
+	r.setRequestHeader('Accept', 'application/json')
+	r.onreadystatechange = ->
+		return unless @readyState is 4
+
+		if @status is 200
+			options.success(JSON.parse(@response))
+		else
+			options.error()
+
+	data = ''
+
+	for own field, value of options.data
+		data += ';' if data
+		data += field.replace(/\s/g, '+') + '=' + encodeURIComponent(value)
+
+	r.send(data or null)
+
+	null
+
+call = (method, options = {}, callback) ->
 	options.stream ?= Traxex.config.stream if Traxex.config
 
-	$.ajax
+	request
 		url: '/_?method=' + method
-		type: 'POST'
 		data: options
-		dataType: 'json'
 
 		success: (data) ->
 			callback(data.error, data.result)

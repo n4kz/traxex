@@ -1,6 +1,8 @@
 Traxex = @Traxex = {}
 
-$ ->
+Gator(document).on 'readystatechange', ->
+	return if document.readyState isnt 'complete'
+
 	update = (changes, initial) ->
 		id = Traxex.view.current or location.hash.slice(1)
 
@@ -27,14 +29,14 @@ $ ->
 		Traxex.model.check ->
 			update(yes, yes)
 
-	$(document).on 'click', '.action', ->
-		action = $(@).data('action').split(':')
+	Gator(document).on 'click', '.action', (event) ->
+		action = event.target.getAttribute('data-action').split(':')
 
 		actions[action[0]](action[1])
 
 		return no
 
-	$(window).on 'hashchange', ->
+	Gator(window).on 'hashchange', ->
 		id = location.hash.slice(1)
 
 		actions.open(id)
@@ -49,9 +51,8 @@ actions =
 		Traxex.view.open(id)
 		return unless id
 
-		if not Traxex.model.comments[id]
+		if Traxex.model.comments[id]
+			Traxex.view.update()
+		else
 			Traxex.model.fetchComments id, 0, ->
 				Traxex.view.update()
-		else
-			Traxex.view.update()
-

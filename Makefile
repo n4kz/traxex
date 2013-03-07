@@ -3,7 +3,7 @@ UGLIFY=--compress --mangle
 
 all:
 	coffee --compile --lint src/js/*.coffee
-	uglifyjs src/js/lib/zepto.js $(UGLIFY) >> public/build.js
+	uglifyjs src/js/lib/gator.js $(UGLIFY) >> public/build.js
 	cat src/js/lib/ulfsaar.min.js          >> public/build.js
 	uglifyjs src/js/main.js      $(UGLIFY) >> public/build.js
 	uglifyjs src/js/api.js       $(UGLIFY) >> public/build.js
