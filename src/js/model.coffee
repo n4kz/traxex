@@ -9,19 +9,24 @@ Traxex.model =
 	ready: no
 
 	setup: (callback) ->
-		Traxex.getConfig null, (error, result) =>
+		Traxex.getUser null, (error, result) =>
 			throw new Error(error.message) if error
 
-			Traxex.config = result.config
+			Traxex.user = result
 
-			Traxex.getTagStream tag: ':type', (error, result) =>
+			Traxex.getConfig null, (error, result) =>
 				throw new Error(error.message) if error
 
-				for type in result.stream
-					@types[type.body] = type.id
+				Traxex.config = result.config
 
-				@ready = yes
-				callback()
+				Traxex.getTagStream tag: ':type', (error, result) =>
+					throw new Error(error.message) if error
+
+					for type in result.stream
+						@types[type.body] = type.id
+
+					@ready = yes
+					callback()
 
 	check: (callback) ->
 		Traxex.getMark {}, (error, result) =>

@@ -21,7 +21,7 @@ call = (method, options, callback) ->
 
 	null
 
-for method in ['getTagStream', 'getLinkStream', 'getTagMark', 'getLinkMark', 'getMark', 'getConfig']
+for method in ['getTagStream', 'getLinkStream', 'getTagMark', 'getLinkMark', 'getMark', 'getConfig', 'getUser']
 	((method) ->
 		Traxex[method] = ->
 			call.apply(null, [method].concat(Array.prototype.slice.call(arguments)))

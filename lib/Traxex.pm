@@ -4,14 +4,14 @@ use Vermishel::Client;
 use JSON;
 use Digest::MD5 'md5_hex';
 use Text::Markdown 'markdown';
-#use Redis;
+use Redis;
 
 my $config    = do 'traxex.conf';
 my $vermishel = Vermishel::Client->new(%{ $config->{'vermishel'} });
 my $types     = {};
 
-#my $redis     = Redis->new(ecoding => undef);
-#$redis->select($config->{'redis'}{'db'} //= 0);
+my $redis     = Redis->new(ecoding => undef);
+$redis->select($config->{'redis'}{'db'} //= 0);
 
 $vermishel->authenticate();
 
@@ -87,7 +87,7 @@ Alleria->load('commands')->commands({
 		description => 'Show all open issues, issue/comment by id or issues by type',
 	},
 
-	#auth => 'Get authentication url',
+	auth => 'Get authentication url',
 });
 
 Alleria->focus('message::command' => sub {
@@ -282,16 +282,16 @@ Alleria->focus('message::command' => sub {
 			} reverse @results;
 		}
 
-		#when ('auth') {
-		#	my $secret = md5_hex join ':', $$, $config->{'secret'}, $message->{'from'};
-		#	my $url    = join '/auth/', $config->{'host'}, $secret; 
+		when ('auth') {
+			my $secret = md5_hex join ':', $$, $config->{'secret'}, $message->{'from'}, time, rand;
+			my $url    = join '/auth?token=', $config->{'host'}, $secret;
 
-		#	# Save token to redis
-		#	$redis->setex($config->{'redis'}{'keys'}{'auth'}. $secret => 3600 => $message->{'from'}, sub {});
+			# Save token to redis
+			$redis->setex($config->{'redis'}{'keys'}{'auth'}. $secret, 3600, $message->{'from'}, sub {});
 
-		#	# Send auth url back
-		#	message $url;
-		#}
+			# Send auth url back
+			message $url;
+		}
 	}
 });
 
