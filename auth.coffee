@@ -39,8 +39,8 @@ if argv.help
 					domain: config.all.host
 					value: secret
 
-				redis.setex(config.server.keys.unique + secret, 86400, result)
-				redis.set(config.server.keys.user.data + result, JSON.stringify(id: result, username: result.replace(/@.*$/, ''))
+				redis.setex(config.server.keys.unique + secret, 864000, result)
+				redis.set(config.server.keys.user.data + result, JSON.stringify(id: result, username: result.replace(/@.*$/, '')))
 
 				@redirect(argv.base)
 				redis.del(key)

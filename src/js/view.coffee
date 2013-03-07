@@ -20,6 +20,8 @@ each = (name, container, action) ->
 @Traxex.view =
 	_:
 		control      : 'c'
+		search       : 'c-search'
+		issues       : 'c-issues-list'
 		filters      : 'c-filter-list'
 		issueN       : 'c-issues-issue-'
 		inner        : 'd-inner'
@@ -28,21 +30,28 @@ each = (name, container, action) ->
 	ready: no
 	filter: 'open'
 	current: 0
+	filtered: []
+	hidden: []
 
+	# Prepare view
 	setup: ->
-		find(@_.control)[0].appendChild(@issues = render('<ul class=c-issues-list></ul>')[0])
-
+		@issues  = find(@_.issues)[0]
 		@filters = find(@_.filters)[0]
 		@inner   = find(@_.inner)[0]
+		@input   = find(@_.search)[0]
+
+		@input.removeAttribute('style')
 
 		@ready = yes
 
+	# Reset filters
 	reset: ->
 		each 'action', @filters, ->
 			@classList.remove('selected')
 
 		empty(@issues)
 
+	# Render filter list
 	renderFilters: (data) ->
 		@setup() unless @ready
 
@@ -56,6 +65,7 @@ each = (name, container, action) ->
 		for filter in filters
 			@filters.appendChild template 'filter', filter: filter
 
+	# Render issues by type
 	render: (type = @filter) ->
 		@setup() unless @ready
 		@reset()
@@ -65,7 +75,7 @@ each = (name, container, action) ->
 		each 'action', @filters, ->
 			@classList.add('selected') if @getAttribute('data-action') is "render:#{type}"
 
-		issues = []
+		@filtered = issues = []
 
 		for own id, issue of Traxex.model.issues when type is 'all' or issue[type]
 			issues.push(issue)
@@ -74,20 +84,50 @@ each = (name, container, action) ->
 			`a.id > b.id? -1 : (b.id > a.id? 1 : 0)`
 
 		for issue in issues
-			issue.selected = issue.id is @current
-			issue.type = @_.issueN + issue.id
-			@issues.appendChild template 'issue', issue
 
-	clear: () ->
-		empty(@inner)
+			unless issue.node
+				issue.selected = issue.id is @current
+				issue.type = @_.issueN + issue.id
+				issue.node = template 'issue', issue
+				issue.text = issue.node.textContent.toLowerCase()
 
+			@issues.appendChild issue.node
+
+	search: (query) ->
+		hidden  = @hidden
+		@hidden = []
+
+		console.log(query)
+
+		if query is undefined
+			query = @lastSearch or ''
+		else
+			@lastSearch = query = query.toLowerCase()
+
+		unless query
+			if hidden.length
+				for issue in hidden
+					issue.node.classList.remove('hidden')
+
+			return
+
+		for issue in @filtered
+			unless ~issue.text.indexOf(query)
+				issue.node.classList.add('hidden')
+				@hidden.push(issue)
+			else
+				issue.node.classList.remove('hidden')
+
+		return
+
+	# Render selected issue on left side
 	open: (id) ->
 		return if id and @current is id
 
 		issue    = Traxex.model.issues[id]
 		comments = Traxex.model.comments[id] or []
 
-		@clear()
+		empty(@inner)
 		return unless issue
 
 		@current = location.hash = Number(id)
@@ -105,6 +145,7 @@ each = (name, container, action) ->
 		@inner.appendChild(template('header', issue))
 		@inner.appendChild(template('comments'))
 
+	# Update issue comments on left side
 	update: () ->
 		id = @current
 		data = Traxex.model.comments[id]
@@ -129,7 +170,7 @@ Ulfsaar 'filter', '''
 
 Ulfsaar 'header', '''
 	<div class=d-header>
-		<span class=d-header-number>{{>number}}</span>
+		<span class=d-header-number>{{>number}}</span>&nbsp;
 		<span class=d-header-name>{{>body}}</span>
 		<br>
 		<span class=d-header-author>{{meta.author.name}}</span>
@@ -151,7 +192,7 @@ Ulfsaar 'comments', '''
 
 Ulfsaar 'issue', '''
 	<li class="c-issues-issue {{type}}{{#selected}} selected{{/selected}}">
-		<span class=c-issues-issue-number>{{>number}}</span>
+		<span class=c-issues-issue-number>{{>number}}</span>&nbsp;
 		<span class=c-issues-issue-name>{{>body}}</span>
 	</li>
 '''

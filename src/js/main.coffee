@@ -11,9 +11,7 @@ Gator(document).on 'readystatechange', ->
 
 			if id
 				Traxex.model.fetchComments id, 0, ->
-					if initial
-						Traxex.view.open(id)
-
+					Traxex.view.open(id) if initial
 					Traxex.view.update()
 
 		setTimeout((->
@@ -36,14 +34,16 @@ Gator(document).on 'readystatechange', ->
 
 		return no
 
-	Gator(window).on 'hashchange', ->
-		id = location.hash.slice(1)
+	Gator(document).on 'keyup', '.' + Traxex.view._.search, (event) ->
+		Traxex.view.search(event.target.value)
 
-		actions.open(id)
+	Gator(window).on 'hashchange', ->
+		actions.open(location.hash.slice(1))
 
 actions =
 	render: (filter) ->
 		Traxex.view.render(filter)
+		Traxex.view.search()
 
 	open: (id) ->
 		return if id is Traxex.view.current

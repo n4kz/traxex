@@ -87,8 +87,8 @@ a:focus {
 }
 
 .c-filter-list {
-	padding-left: 2em;
-	margin-bottom: 2em;
+	padding: 0 0 0 2em;
+	margin-bottom: 1.17em;
 	list-style: none;
 }
 
@@ -108,12 +108,22 @@ a:focus {
 	overflow-y: auto;
 }
 
-.c-issues-issue-number,
-.d-header-number {
-	margin-right: 0.33em;
+.selected,
+.selected a,
+.active {
+	color: white !important;
 }
 
-.selected,
-.active {
-	color: #AAE !important;
+.hidden {
+	display: none;
+}
+
+.c-search {
+	background: transparent;
+	border: none;
+	border-bottom: 1px dotted #888;
+	color: #DDD;
+	padding: 0 0 0 2em;
+	height: 1.67em;
+	width: 75%;
 }
