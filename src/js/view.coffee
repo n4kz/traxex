@@ -97,8 +97,6 @@ each = (name, container, action) ->
 		hidden  = @hidden
 		@hidden = []
 
-		console.log(query)
-
 		if query is undefined
 			query = @lastSearch or ''
 		else

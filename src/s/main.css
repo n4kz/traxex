@@ -127,3 +127,19 @@ a:focus {
 	height: 1.67em;
 	width: 75%;
 }
+
+:focus {
+	outline: 0;
+}
+
+:focus::-webkit-input-placeholder {
+	opacity: 0;
+}
+
+:focus::-moz-placeholder {
+	opacity: 0;
+}
+
+:focus:-moz-placeholder {
+	opacity: 0;
+}
