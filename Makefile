@@ -20,3 +20,25 @@ all:
 
 clean:
 	rm -rf src/js/*.js
+
+debug:
+	# Coffee
+	coffee --compile --lint src/js/*.coffee
+	# Scripts
+	cat src/js/lib/gator.js                         >> public/build.js
+	cat src/js/lib/ulfsaar.min.js                   >> public/build.js
+	cat src/js/main.js                              >> public/build.js
+	cat src/js/api.js                               >> public/build.js
+	cat src/js/model.js                             >> public/build.js
+	cat src/js/view.js | sed 's/\\n\t*//g'          >> public/build.js
+	# Styles
+	cat src/s/normalize.css                          > public/build.css
+	cat src/s/main.css                              >> public/build.css
+	# Concat
+	echo -n `cat src/index.html` | sed 's/> </></g'  > public/index.html
+	echo -n '<style>'                               >> public/index.html
+	cat public/build.css                            >> public/index.html
+	echo -n '</style><script>'                      >> public/index.html
+	cat public/build.js                             >> public/index.html
+	echo    '</script>'                             >> public/index.html
+	rm public/build.*
