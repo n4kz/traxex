@@ -10,7 +10,7 @@ Traxex.model =
 
 	setup: (callback) ->
 		Traxex.getUser null, (error, result) =>
-			throw new Error(error.message) if error
+			return Traxex.view.warn(error.message) if error
 
 			Traxex.user = result
 

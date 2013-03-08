@@ -25,6 +25,7 @@ each = (name, container, action) ->
 		filters      : 'c-filter-list'
 		issueN       : 'c-issues-issue-'
 		inner        : 'd-inner'
+		message      : 'd-inner-message'
 		comments     : 'd-comments'
 
 	ready: no
@@ -144,13 +145,21 @@ each = (name, container, action) ->
 		@inner.appendChild(template('comments'))
 
 	# Update issue comments on left side
-	update: () ->
+	update: ->
 		id = @current
 		data = Traxex.model.comments[id]
 		return unless id
 		return unless data
 
 		@inner.replaceChild(template('comments', comments: data), find(@_.comments, @inner)[0])
+
+	# Warn about error
+	warn: (text) ->
+		@setup() unless @ready
+
+		empty(@inner)
+		@inner.appendChild template 'message', message: text
+
 
 Ulfsaar.time = (scope) ->
 	return (new Date(scope('time'))).toLocaleString()
@@ -159,6 +168,8 @@ Ulfsaar.body = (scope) ->
 	return render(scope('body'))[0].innerHTML
 
 Ulfsaar 'number', '<a class=action data-action=open:{{id}} href=#{{id}}>#{{id}}</a>'
+
+Ulfsaar 'message', '<h1 class=d-inner-message>{{message}}</h1>'
 
 Ulfsaar 'filter', '''
 	<li>
