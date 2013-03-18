@@ -9,6 +9,7 @@ use Redis;
 my $config    = do 'traxex.conf';
 my $vermishel = Vermishel::Client->new(%{ $config->{'vermishel'} });
 my $types     = {};
+my $defaults  = {};
 
 my $redis     = Redis->new(ecoding => undef);
 $redis->select($config->{'redis'}{'db'} //= 0);
@@ -17,6 +18,7 @@ $vermishel->authenticate();
 
 our ($author, $self);
 
+# Send message to user
 sub message ($) {
 	$self->message({
 		to   => $author,
@@ -24,52 +26,105 @@ sub message ($) {
 	});
 } # message
 
-{
-	# Create stream on demand
-	my ($response) = $vermishel->createStream({ stream => $config->{'stream'} });
+# Create new issue type for project
+sub type ($$) {
+	my ($name, $type) = @_;
 
-	if ($response->{'error'}) {
-		given ($response->{'error'}{'message'}) {
-			break when /exists/;
+	return 'Type exists already'
+		if $types->{$name}{$type};
 
-			die $response->{'error'}{'message'};
-		}
-	}
+	return 'Choose another type name'
+		if $type !~ m{^\w+$};
 
-	# Get identifiers for type messages
-	($response) = $vermishel->getTagStream({
-		stream => $config->{'stream'},
-		tag    => ':type',
+	my ($response) = $vermishel->createMessage({
+		stream => $name,
+		body   => $type,
+		meta   => to_json({
+			type => 'type',
+			tags => ['type'],
+		}),
 	});
 
-	die $response->{'error'}{'message'}
+	return 'Got error for your request: '. $response->{'error'}{'message'}
 		if $response->{'error'};
 
-	$types->{$_->{'body'}} = $_->{'id'}
-		foreach @{ $response->{'result'}{'stream'} };
+	$types->{$name}{$type} = $response->{'result'}{'id'};
 
-	foreach (@{ $config->{'types'} }) {
-		next if $types->{$_};
+	return undef;
+} # type
+
+# Update (set) default type
+sub deftype ($;$) {
+	my ($name, $type) = @_;
+	my $response;
+
+	if ($type) {
+		return 'Only existing types allowed'
+			unless $types->{$name}{$type};
+
+		return undef
+			if $type eq ($defaults->{$name} || '');
 
 		($response) = $vermishel->createMessage({
-			stream => $config->{'stream'},
-			body   => $_,
-			meta   => to_json({ type => 'type' }),
+			stream => $name,
+			body   => $type,
+			meta   => to_json({
+				type => 'type',
+				tags => ['default'],
+			}),
 		});
-
-		die $response->{'error'}{'message'}
-			if $response->{'error'};
-
-		$types->{$_} = $response->{'result'}{'id'};
+	} else {
+		($response) = $vermishel->getTagStream({
+			stream => $name,
+			tag    => '.default',
+		});
 	}
-}
 
-my $typehelp = join ' | ', @{ $config->{'types'} };
+	return 'Got error for your request: '. $response->{'error'}{'message'}
+		if $response->{'error'};
+
+	unless ($type) {
+		my $message = $response->{'result'}{'stream'}[0];
+
+		return 'Default type was not set'
+			unless $message;
+
+		$defaults->{$name} = $message->{'body'};
+	} else {
+		$defaults->{$name} = $type;
+	}
+
+	return undef;
+} # deftype
+
+# Reload existing types for project
+sub types ($) {
+	my ($name) = @_;
+
+	# Get identifiers for type messages
+	my ($response) = $vermishel->getTagStream({
+		stream => $name,
+		tag    => '.type',
+	});
+
+	return 'Got error for your request: '. $response->{'error'}{'message'}
+		if $response->{'error'};
+
+	$types->{$name} = {};
+
+	$types->{$name}{$_->{'body'}} = $_->{'id'}
+		foreach @{ $response->{'result'}{'stream'} };
+
+	return 'Project not exists or is not configured'
+		unless keys %{ $types->{$name} };
+
+	return deftype $name;
+} # types
 
 Alleria->load('commands')->commands({
 	issue => {
-		arguments   => '<text...>',
-		description => 'Create new issue',
+		arguments   => '<project> <text...>',
+		description => 'Create new issue in project',
 	},
 
 	comment => {
@@ -78,13 +133,20 @@ Alleria->load('commands')->commands({
 	},
 
 	mark => {
-		arguments   => join($typehelp, '<id> <', '>'),
+		arguments   => '<id> <type>',
 		description => 'Mark issue as open or closed',
 	},
 
 	show => {
-		arguments   => join($typehelp, '[<id> | <', '> | comments <id>]'),
+		arguments   => '[<id> | <project> <type> | comments <id>]',
 		description => 'Show all open issues, issue/comment by id or issues by type',
+	},
+
+	projects => 'Show available projects',
+
+	project => {
+		arguments   => '<name> [<command>] [arguments]',
+		description => 'Manage project',
 	},
 
 	auth => 'Get authentication url',
@@ -101,8 +163,9 @@ Alleria->focus('message::command' => sub {
 	$args    = $message->{'arguments'};
 
 	given ($message->{'command'}) {
-		my $issue;
+		my ($issue, $project);
 
+		# Create comment
 		when ('comment') {
 			($issue, $args) = split m{ +}, $args, 2;
 
@@ -113,7 +176,7 @@ Alleria->focus('message::command' => sub {
 			my ($response) = $vermishel->getMessage({ message => $issue });
 
 			# Check for errors
-			return message 'Got error for your request '. $response->{'error'}{'message'}
+			return message 'Got error for your request: '. $response->{'error'}{'message'}
 				if $response->{'error'};
 
 			# Check parent type
@@ -124,13 +187,31 @@ Alleria->focus('message::command' => sub {
 			$_ = 'issue', continue;
 		}
 
+		# Create issue
 		when ('issue') {
-			return message 'Issue text required'
-				unless $args;
+			unless ($issue) {
+				my $error;
+				($project, $args) = split m{ +}, $args, 2;
+
+				return message 'Project name required'
+					unless $project;
+
+				return message 'Issue text required'
+					unless $args;
+
+				$error = types $project
+					unless $types->{$project};
+
+				return message $error
+					if $error;
+			} else {
+				return message 'Comment text required'
+					unless $args;
+			}
 
 			# Post message
 			my ($response) = $vermishel->createMessage({
-				stream => $config->{'stream'},
+				stream => $project,
 				body   => markdown($args),
 				meta   => to_json({
 					type   => $issue? 'comment' : 'issue',
@@ -144,16 +225,17 @@ Alleria->focus('message::command' => sub {
 			});
 
 			# Check for errors
-			return message 'Got error for your request '. $response->{'error'}{'message'}
+			return message 'Got error for your request: '. $response->{'error'}{'message'}
 				if $response->{'error'};
 
 			# Get id
 			my $id = $response->{'result'}{'id'};
 
 			# Mark as open
+			# TODO: use default type
 			$vermishel->setLink({
 				messageA => $id,
-				messageB => $types->{'open'},
+				messageB => $types->{$project}{ $defaults->{$project} },
 			}) unless $issue;
 
 			# Send message to author
@@ -172,47 +254,56 @@ Alleria->focus('message::command' => sub {
 			}
 		}
 
+		# Change issue status
 		when ('mark') {
 			my ($issue, $type) = split m{ +}, $args, 2;
-
-			# Check arguments
-			return message 'Wrong arguments'
-				unless $types->{$type};
+			my $error;
 
 			# Get target issue
 			my ($response) = $vermishel->getMessage({ message => $issue });
 
-			return message 'Got error for your request '. $response->{'error'}{'message'}
+			return message 'Got error for your request: '. $response->{'error'}{'message'}
 				if $response->{'error'};
 
 			return message 'Wrong issue id'
 				if $response->{'result'}{'meta'}{'type'} ne 'issue';
 
+			# Load types
+			$error = types $project
+				unless $types->{$project};
+
+			return message $error
+				if $error;
+
+			# Check target type
+			return message 'Wrong arguments'
+				unless $types->{$project}{$type};
+
 			# Unset all possible types
-			foreach (keys %$types) {
+			foreach (values %{ $types->{$project} }) {
 				# TODO: Check reponse
 				$vermishel->unsetLink({
 					messageA => $issue,
-					messageB => $types->{$_},
+					messageB => $_,
 				});
 			}
 
 			# Set desired type
 			($response) = $vermishel->setLink({
 				messageA => $issue,
-				messageB => $types->{$type},
+				messageB => $types->{$project}{$type},
 			});
 
-			return message 'Got error for your request '. $response->{'error'}{'message'}
+			return message 'Got error for your request: '. $response->{'error'}{'message'}
 				if $response->{'error'};
 
 			# Create comment
 			($response) = $vermishel->createMessage({
-				stream  => $config->{'stream'},
+				stream  => $project,
 				body    => "Marked as $type",
 				replyto => $issue,
 				meta    => to_json({
-					type => 'comment',
+					type   => 'comment',
 					author => {
 						jid  => (split '/', $author)[0],
 						name => (split '@', $author)[0],
@@ -220,7 +311,7 @@ Alleria->focus('message::command' => sub {
 				})
 			});
 
-			return message 'Got error for your request '. $response->{'error'}{'message'}
+			return message 'Got error for your request: '. $response->{'error'}{'message'}
 				if $response->{'error'};
 
 			# Send message to author
@@ -237,17 +328,15 @@ Alleria->focus('message::command' => sub {
 			}
 		}
 
+		# Show issue or comment
 		when ('show') {
 			my (@results, $response, $issue);
-
-			$args = 'open'
-				unless $args;
 
 			given ($args) {
 				when (m{^\d+$}) {
 					($response) = $vermishel->getMessage({ message => $args });
 
-					return message 'Got error for your request '. $response->{'error'}{'message'}
+					return message 'Got error for your request: '. $response->{'error'}{'message'}
 						if $response->{'error'};
 
 					@results = $response->{'result'};
@@ -257,31 +346,119 @@ Alleria->focus('message::command' => sub {
 					when m{^comments +(.*)};
 
 				default {
-					return message 'Unsupported type '. $args
-						unless $issue or exists $types->{$args};
+					my ($project, $type, $error);
 
-					do {
-						($response) = $vermishel->getLinkStream({ message => $issue || $types->{$args} });
+					unless ($issue) {
+						($project, $type) = split m{ +}, $_, 2;
 
-						return message 'Got error for your request '. $response->{'error'}{'message'}
-							if $response->{'error'};
+						return message 'Project name or issue id required'
+							unless $project;
 
-						last unless push @results, @{ $response->{'result'}{'stream'} };
+						return message $error
+							if not $types->{$project} and $error = types $project;
 
-					# TODO: move to config
-					} while not @results % 50;
+						$type ||= $defaults->{$project};
+
+						return message 'Type was not found in project'
+							unless $types->{$project}{$type};
+					}
+
+					# TODO: refactor
+					{
+						do {
+							($response) = $vermishel->getLinkStream({ message => $issue || $types->{$project}{$type} });
+
+							return message 'Got error for your request: '. $response->{'error'}{'message'}
+								if $response->{'error'};
+
+							last unless push @results, @{ $response->{'result'}{'stream'} };
+
+						# TODO: move to config
+						} while not @results % 50;
+					}
 				}
 			}
 
-			message join "\n", '', map {
-				sprintf '#%i (%i) %s', grep {
-					s{</?\w+.*?>} {}ig or 1
-				} @{ $_ }{qw{ id linked body }}
+			message join $/, map {
+				sprintf '#%i (%i) %s', @{ $_ }{qw{ id linked body }}
 			} grep {
 				not $issue or $_->{'meta'}{'type'} eq 'comment'
 			} reverse @results;
 		}
 
+		# List all projects
+		# TODO: list projects for another user
+		when ('projects') {
+			my (@subscriptions) = $redis->smembers($config->{'redis'}{'keys'}{'user'}{'subscriptions'}. $message->{'from'}); 
+
+			message join $/, @subscriptions;
+		}
+
+		# Manage project
+		when ('project') {
+			my ($name, $command, $args) = split m{ +}, $args, 3;
+
+			return message 'Project name required'
+				unless $name;
+
+			given ($command) {
+
+				# Reload and list all types
+				when ('types') {
+					my $error = types $name;
+
+					return message $error
+						if $error;
+
+					message join $/, keys %{ $types->{$name} };
+				}
+
+				# Create new type
+				when ('type') {
+					return message 'Type name required'
+						unless $args;
+
+					my $error = type $name, $args;
+
+					return message $error
+						if $error;
+
+					message 'New type created';
+				}
+
+				# Get/set default type
+				when ('default') {
+					my $error;
+
+					# Set default type if requested
+					$error = deftype $name, $args
+						if $args;
+
+					# Reload types on success
+					$error ||= types $name;
+
+					return message $error
+						if $error;
+
+					return message $defaults->{$name}
+						unless $args;
+
+					message 'Default type set';
+				}
+
+				default {
+					# Try to create new project
+					my ($response) = $vermishel->createStream({ stream => $name });
+
+					return message $response->{'error'}{'message'}
+						if $response->{'error'};
+
+					message 'Project was created';
+				}
+			}
+		}
+
+		# Authentication
 		when ('auth') {
 			my $secret = md5_hex join ':', $$, $config->{'secret'}, $message->{'from'}, time, rand;
 			my $url    = join '/auth?token=', $config->{'host'}, $secret;
