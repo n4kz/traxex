@@ -26,6 +26,9 @@ sub message ($) {
 	});
 } # message
 
+sub _error ($) { "API error: $_[0]" }
+sub error  ($) { message &_error }
+
 # Create new issue type for project
 sub type ($$) {
 	my ($name, $type) = @_;
@@ -45,7 +48,7 @@ sub type ($$) {
 		}),
 	});
 
-	return 'Got error for your request: '. $response->{'error'}{'message'}
+	return _error $response->{'error'}{'message'}
 		if $response->{'error'};
 
 	$types->{$name}{$type} = $response->{'result'}{'id'};
@@ -80,7 +83,7 @@ sub deftype ($;$) {
 		});
 	}
 
-	return 'Got error for your request: '. $response->{'error'}{'message'}
+	return _error $response->{'error'}{'message'}
 		if $response->{'error'};
 
 	unless ($type) {
@@ -107,7 +110,7 @@ sub types ($) {
 		tag    => '.type',
 	});
 
-	return 'Got error for your request: '. $response->{'error'}{'message'}
+	return _error $response->{'error'}{'message'}
 		if $response->{'error'};
 
 	$types->{$name} = {};
@@ -176,12 +179,14 @@ Alleria->focus('message::command' => sub {
 			my ($response) = $vermishel->getMessage({ message => $issue });
 
 			# Check for errors
-			return message 'Got error for your request: '. $response->{'error'}{'message'}
+			return error $response->{'error'}{'message'}
 				if $response->{'error'};
 
 			# Check parent type
 			return message 'Only replies to issues are allowed'
 				if $response->{'result'}{'meta'}{'type'} ne 'issue';
+
+			$project = $response->{'result'}{'stream'};
 
 			# Okay, fall through
 			$_ = 'issue', continue;
@@ -225,7 +230,7 @@ Alleria->focus('message::command' => sub {
 			});
 
 			# Check for errors
-			return message 'Got error for your request: '. $response->{'error'}{'message'}
+			return error $response->{'error'}{'message'}
 				if $response->{'error'};
 
 			# Get id
@@ -242,15 +247,13 @@ Alleria->focus('message::command' => sub {
 			message join ' created with id #', $issue? 'Comment' : 'Issue', $id;
 
 			# Notify other users
-			if ($self->can('roster')) {
-				foreach (grep { $_ ne $author } $self->roster('online')) {
-					$self->message({
-						to   => $_,
-						body => $issue?
-							"New comment with #$id was added to issue #$issue by $author":
-							"New issue #$id was opened by $author",
-					});
-				}
+			foreach (grep { $_ ne $author } $self->roster('online')) {
+				$self->message({
+					to   => $_,
+					body => $issue?
+						"New comment with #$id was added to issue #$issue by $author":
+						"New issue #$id was opened by $author",
+				});
 			}
 		}
 
@@ -262,7 +265,7 @@ Alleria->focus('message::command' => sub {
 			# Get target issue
 			my ($response) = $vermishel->getMessage({ message => $issue });
 
-			return message 'Got error for your request: '. $response->{'error'}{'message'}
+			return error $response->{'error'}{'message'}
 				if $response->{'error'};
 
 			return message 'Wrong issue id'
@@ -294,7 +297,7 @@ Alleria->focus('message::command' => sub {
 				messageB => $types->{$project}{$type},
 			});
 
-			return message 'Got error for your request: '. $response->{'error'}{'message'}
+			return error $response->{'error'}{'message'}
 				if $response->{'error'};
 
 			# Create comment
@@ -311,20 +314,18 @@ Alleria->focus('message::command' => sub {
 				})
 			});
 
-			return message 'Got error for your request: '. $response->{'error'}{'message'}
+			return error $response->{'error'}{'message'}
 				if $response->{'error'};
 
 			# Send message to author
 			message "Marked #$issue as $type";
 
 			# Notify other users
-			if ($self->can('roster')) {
-				foreach (grep { $_ ne $author } $self->roster('online')) {
-					$self->message({
-						to   => $_,
-						body => "Issue #$issue was marked as $type by $author",
-					});
-				}
+			foreach (grep { $_ ne $author } $self->roster('online')) {
+				$self->message({
+					to   => $_,
+					body => "Issue #$issue was marked as $type by $author",
+				});
 			}
 		}
 
@@ -336,7 +337,7 @@ Alleria->focus('message::command' => sub {
 				when (m{^\d+$}) {
 					($response) = $vermishel->getMessage({ message => $args });
 
-					return message 'Got error for your request: '. $response->{'error'}{'message'}
+					return error $response->{'error'}{'message'}
 						if $response->{'error'};
 
 					@results = $response->{'result'};
@@ -359,7 +360,7 @@ Alleria->focus('message::command' => sub {
 
 						$type ||= $defaults->{$project};
 
-						return message 'Type was not found in project'
+						return message "Type $type was not found in project"
 							unless $types->{$project}{$type};
 					}
 
@@ -368,7 +369,7 @@ Alleria->focus('message::command' => sub {
 						do {
 							($response) = $vermishel->getLinkStream({ message => $issue || $types->{$project}{$type} });
 
-							return message 'Got error for your request: '. $response->{'error'}{'message'}
+							return error $response->{'error'}{'message'}
 								if $response->{'error'};
 
 							last unless push @results, @{ $response->{'result'}{'stream'} };
@@ -380,7 +381,9 @@ Alleria->focus('message::command' => sub {
 			}
 
 			message join $/, map {
-				sprintf '#%i (%i) %s', @{ $_ }{qw{ id linked body }}
+				sprintf '#%i (%i) %s', grep {
+					s{</?\w+.*?>} {}ig or 1
+				} @{ $_ }{qw{ id linked body }}
 			} grep {
 				not $issue or $_->{'meta'}{'type'} eq 'comment'
 			} reverse @results;
@@ -391,76 +394,127 @@ Alleria->focus('message::command' => sub {
 		when ('projects') {
 			my (@subscriptions) = $redis->smembers($config->{'redis'}{'keys'}{'user'}{'subscriptions'}. $message->{'from'}); 
 
-			message join $/, @subscriptions;
+			return message join ', ', @subscriptions
+				if @subscriptions;
+
+			message 'No projects found';
 		}
 
 		# Manage project
 		when ('project') {
-			my ($name, $command, $args) = split m{ +}, $args, 3;
+			my ($project, $command, $args) = split m{ +}, $args, 3;
 
 			return message 'Project name required'
-				unless $name;
+				unless $project;
 
 			given ($command) {
 
 				# Reload and list all types
 				when ('types') {
-					my $error = types $name;
+					my $error = types $project;
 
 					return message $error
 						if $error;
 
-					message join $/, keys %{ $types->{$name} };
+					message join ', ', keys %{ $types->{$project} };
 				}
 
 				# Create new type
 				when ('type') {
-					return message 'Type name required'
-						unless $args;
+					my $type = $args;
 
-					my $error = type $name, $args;
+					return message 'Type name required'
+						unless $type;
+
+					my $error = type $project, $type;
 
 					return message $error
 						if $error;
 
-					message 'New type created';
+					message "New type $type was created";
 				}
 
 				# Get/set default type
 				when ('default') {
+					my $type = $args;
 					my $error;
 
 					# Set default type if requested
-					$error = deftype $name, $args
-						if $args;
+					$error = deftype $project, $type
+						if $type;
 
 					# Reload types on success
-					$error ||= types $name;
+					$error ||= types $project;
 
 					return message $error
 						if $error;
 
-					return message $defaults->{$name}
-						unless $args;
+					return message $defaults->{$project}
+						unless $type;
 
-					message 'Default type set';
+					message "Default type was set to $type";
+				}
+
+				# Grant access to project
+				when ('grant') {
+					my ($user) = split m{ +}, $args, 2;
+
+					return message 'Jabber id required'
+						unless $user;
+
+					return message "User $user was not found in roster"
+						unless grep { $_ eq $user } $self->roster();
+
+					my $result = $redis->sadd($config->{'redis'}{'keys'}{'user'}{'subscriptions'}. $user, $project); 
+
+					if ($result) {
+						$self->message({
+							to   => $user,
+							body => "Access to $project granted",
+						});
+
+						message 'Access granted';
+					} else {
+						message "User $user already has access to $project";
+					}
+				}
+
+				# Revoke access to project
+				when ('revoke') {
+					my ($user) = split m{ +}, $args, 2;
+
+					return message 'Jabber id required'
+						unless $user;
+
+					my $result = $redis->srem($config->{'redis'}{'keys'}{'user'}{'subscriptions'}. $user, $project); 
+
+					if ($result) {
+						$self->message({
+							to   => $user,
+							body => "Access to $project revoked",
+						}) if grep { $_ eq $user } $self->roster();
+
+						message 'Access revoked';
+					} else {
+						message "User $user has no access to $project";
+					}
 				}
 
 				default {
 					# Try to create new project
-					my ($response) = $vermishel->createStream({ stream => $name });
+					my ($response) = $vermishel->createStream({ stream => $project });
 
 					return message $response->{'error'}{'message'}
 						if $response->{'error'};
 
-					message 'Project was created';
+					message "Project $project created";
 				}
 			}
 		}
 
 		# Authentication
 		when ('auth') {
-			my $secret = md5_hex join ':', $$, $config->{'secret'}, $message->{'from'}, time, rand;
+			my $secret = md5_hex join ':', $$, $message->{'from'}, time, rand;
 			my $url    = join '/auth?token=', $config->{'host'}, $secret;
 
 			# Save token to redis
