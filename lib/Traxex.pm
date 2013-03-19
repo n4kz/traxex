@@ -53,47 +53,6 @@ sub type ($$) {
 	return undef;
 } # type
 
-# Update (set) default type
-sub deftype ($;$) {
-	my ($name, $type) = @_;
-	my $response;
-
-	if ($type) {
-		return 'Only existing types allowed'
-			unless $types->{$name}{$type};
-
-		return undef
-			if $type eq ($defaults->{$name} || '');
-
-		($response) = $vermishel->createMessage({
-			stream => $name,
-			body   => $type,
-			meta   => to_json({ type => 'default' }),
-		});
-	} else {
-		($response) = $vermishel->getTagStream({
-			stream => $name,
-			tag    => ':default',
-		});
-	}
-
-	return _error $response->{'error'}{'message'}
-		if $response->{'error'};
-
-	unless ($type) {
-		my $message = $response->{'result'}{'stream'}[0];
-
-		return 'Default type was not set'
-			unless $message;
-
-		$defaults->{$name} = $message->{'body'};
-	} else {
-		$defaults->{$name} = $type;
-	}
-
-	return undef;
-} # deftype
-
 # Reload existing types for project
 sub types ($) {
 	my ($name) = @_;
@@ -115,7 +74,11 @@ sub types ($) {
 	return 'Project not exists or is not configured'
 		unless keys %{ $types->{$name} };
 
-	return deftype $name;
+	$defaults->{$name} = (sort {
+		$types->{$name}{$a} <=> $types->{$name}{$b}
+	} keys %{ $types->{$name} })[0];
+
+	return undef;
 } # types
 
 Alleria->load('commands')->commands({
@@ -231,7 +194,6 @@ Alleria->focus('message::command' => sub {
 			my $id = $response->{'result'}{'id'};
 
 			# Mark as open
-			# TODO: use default type
 			$vermishel->setLink({
 				messageA => $id,
 				messageB => $types->{$project}{ $defaults->{$project} },
@@ -358,18 +320,14 @@ Alleria->focus('message::command' => sub {
 							unless $types->{$project}{$type};
 					}
 
-					# TODO: refactor
-					{
-						do {
-							($response) = $vermishel->getLinkStream({ message => $issue || $types->{$project}{$type} });
+					# TODO: take number from config
+					while (not @results % 50) {
+						($response) = $vermishel->getLinkStream({ message => $issue || $types->{$project}{$type} });
 
-							return error $response->{'error'}{'message'}
-								if $response->{'error'};
+						return error $response->{'error'}{'message'}
+							if $response->{'error'};
 
-							last unless push @results, @{ $response->{'result'}{'stream'} };
-
-						# TODO: move to config
-						} while not @results % 50;
+						last unless push @results, @{ $response->{'result'}{'stream'} };
 					}
 				}
 			}
@@ -426,27 +384,6 @@ Alleria->focus('message::command' => sub {
 						if $error;
 
 					message "New type $type was created";
-				}
-
-				# Get/set default type
-				when ('default') {
-					my $type = $args;
-					my $error;
-
-					# Set default type if requested
-					$error = deftype $project, $type
-						if $type;
-
-					# Reload types on success
-					$error ||= types $project;
-
-					return message $error
-						if $error;
-
-					return message $defaults->{$project}
-						unless $type;
-
-					message "Default type was set to $type";
 				}
 
 				# Grant access to project
