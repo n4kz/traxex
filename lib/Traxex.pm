@@ -42,10 +42,7 @@ sub type ($$) {
 	my ($response) = $vermishel->createMessage({
 		stream => $name,
 		body   => $type,
-		meta   => to_json({
-			type => 'type',
-			tags => ['type'],
-		}),
+		meta   => to_json({ type => 'type' }),
 	});
 
 	return _error $response->{'error'}{'message'}
@@ -71,15 +68,12 @@ sub deftype ($;$) {
 		($response) = $vermishel->createMessage({
 			stream => $name,
 			body   => $type,
-			meta   => to_json({
-				type => 'type',
-				tags => ['default'],
-			}),
+			meta   => to_json({ type => 'default' }),
 		});
 	} else {
 		($response) = $vermishel->getTagStream({
 			stream => $name,
-			tag    => '.default',
+			tag    => ':default',
 		});
 	}
 
@@ -107,7 +101,7 @@ sub types ($) {
 	# Get identifiers for type messages
 	my ($response) = $vermishel->getTagStream({
 		stream => $name,
-		tag    => '.type',
+		tag    => ':type',
 	});
 
 	return _error $response->{'error'}{'message'}
