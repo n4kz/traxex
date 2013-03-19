@@ -227,6 +227,8 @@ Alleria->focus('message::command' => sub {
 			return message 'Wrong issue id'
 				if $response->{'result'}{'meta'}{'type'} ne 'issue';
 
+			$project = $response->{'result'}{'stream'};
+
 			# Load types
 			$error = types $project
 				unless $types->{$project};
