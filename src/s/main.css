@@ -4,7 +4,8 @@ body {
 	color: #DDD;
 }
 
-body,html {
+body,
+html {
 	height: 100%;
 }
 
@@ -84,8 +85,12 @@ a:focus {
 .c {
 	background: #444;
 	overflow: auto;
-	padding-left: 1em;
+	padding: 0 1em 0 1em;
 	box-shadow: inset 10px 0 20px rgba(0, 0, 0, .4);
+}
+
+.c-inner {
+	padding: 0 2em 0 0;
 }
 
 .c-header {
@@ -93,36 +98,26 @@ a:focus {
 	text-align: middle;
 }
 
-.c-filter-list {
+.c-filters {
 	padding: 0 0 0 2em;
 	margin-bottom: 1.17em;
 	list-style: none;
 }
 
-.c-filter-list li {
+.c-filters li {
 	display: inline;
 }
 
-.c-filter-list a {
+.c-filters a {
 	margin-right: 0.33em;
 }
 
-.c-issues-list {
+.c-issues {
 	list-style: none;
 	padding-left: 0;
 	width: 100%;
 	overflow-x: hidden;
 	overflow-y: auto;
-}
-
-.selected,
-.selected a,
-.active {
-	color: white !important;
-}
-
-.hidden {
-	display: none;
 }
 
 .c-search {
@@ -132,7 +127,17 @@ a:focus {
 	color: #DDD;
 	padding: 0 0 0 2em;
 	height: 1.67em;
-	width: 75%;
+	width: 100%;
+}
+
+.selected,
+.selected .c-issues-issue-number a,
+.active {
+	color: white !important;
+}
+
+.hidden {
+	display: none;
 }
 
 :focus {

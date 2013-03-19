@@ -21,15 +21,15 @@ each = (name, container, action) ->
 	_:
 		control      : 'c'
 		search       : 'c-search'
-		issues       : 'c-issues-list'
-		filters      : 'c-filter-list'
+		issues       : 'c-issues'
+		filters      : 'c-filters'
 		issueN       : 'c-issues-issue-'
 		inner        : 'd-inner'
 		message      : 'd-inner-message'
 		comments     : 'd-comments'
 
 	ready: no
-	filter: 'open'
+	filter: null
 	current: 0
 	filtered: []
 	hidden: []
@@ -60,6 +60,8 @@ each = (name, container, action) ->
 
 		for own key of data
 			filters.unshift(key)
+
+		@filter = filters[0]
 
 		empty(@filters)
 
