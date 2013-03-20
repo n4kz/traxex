@@ -1,51 +1,54 @@
-Traxex = @Traxex = {}
+Traxex = @Traxex =
+	timer: null
+	project: null
 
-Gator(document).on 'readystatechange', ->
-	return if document.readyState isnt 'complete'
+	# Update interface
+	update: (changes, initial) ->
+		clearTimeout(@timer) if initial
 
-	update = (changes, initial) ->
-		id = Traxex.view.current or location.hash.slice(1)
+		id = @view.current or location.hash.slice(1)
+
+		unless @project
+			if id
+				@model.fetchIssue id, (issue) =>
+					@$select issue.stream if issue
+			return
 
 		if changes
-			Traxex.view.render()
+			@view.render()
 
 			if id
-				Traxex.model.fetchComments id, 0, ->
-					Traxex.view.open(id) if initial
-					Traxex.view.update()
+				@model.fetchComments id, 0, =>
+					@view.open(id) if initial
+					@view.update()
 
-		setTimeout((->
-			Traxex.model.check(update)
-		), 20000)
+		@timer = setTimeout((=>
+			@model.check @project, =>
+				@update(arguments[0])
+		), @config.timeout)
 
-	# Setup model
-	Traxex.model.setup ->
-		# Render filters
-		Traxex.view.renderFilters Traxex.model.types
+	###
+		Actions
+	###
 
-		# Get data for the first time
-		Traxex.model.check ->
-			update(yes, yes)
+	# Select another project
+	$select: (project) ->
+		if project isnt @project
+			@model.setup @project = project, =>
+				# Render filters
+				@view.renderFilters @model.types[project]
 
-	Gator(document).on 'click', '.action', (event) ->
-		action = event.target.getAttribute('data-action').split(':')
+				# Get data for the first time
+				@model.check project, =>
+					@update(yes, yes)
 
-		actions[action[0]](action[1])
-
-		return no
-
-	Gator(document).on 'keyup', '.' + Traxex.view._.search, (event) ->
-		Traxex.view.search(event.target.value)
-
-	Gator(window).on 'hashchange', ->
-		actions.open(location.hash.slice(1))
-
-actions =
-	render: (filter) ->
+	# Filter issue list
+	$render: (filter) ->
 		Traxex.view.render(filter)
 		Traxex.view.search()
 
-	open: (id) ->
+	# Show issue details
+	$open: (id) ->
 		return if id is Traxex.view.current
 
 		Traxex.view.open(id)
@@ -56,3 +59,21 @@ actions =
 		else
 			Traxex.model.fetchComments id, 0, ->
 				Traxex.view.update()
+
+Gator(document).on 'readystatechange', ->
+	return if document.readyState isnt 'complete'
+
+	Gator(document).on 'click', '.action', (event) ->
+		action = event.target.getAttribute('data-action').split(':')
+
+		Traxex['$' + action[0]](action[1])
+
+		return no
+
+	Gator(document).on 'keyup', '.' + Traxex.view._.search, (event) ->
+		Traxex.view.search(event.target.value)
+
+	Gator(window).on 'hashchange', ->
+		Traxex.$open(location.hash.slice(1))
+
+	Traxex.update(yes, yes)

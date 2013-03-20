@@ -27,13 +27,13 @@ a:focus {
 .c {
 	height: 100%;
 	min-height: 320px;
+	overflow: auto;
 }
 
 .d {
 	background: #888;
 	float: left;
 	width: 65%;
-	overflow: auto;
 }
 
 .d-inner {
@@ -62,14 +62,14 @@ a:focus {
 }
 
 .d-comments-comment-text {
-	font-size: 0.8em;
+	font-size: 0.9em;
 }
 
 .d-comments-comment-author,
 .d-comments-comment-time,
 .d-header-author,
 .d-header-time {
-	font-size: 0.67em;
+	font-size: 0.8em;
 	color: #BBB;
 }
 
@@ -84,9 +84,8 @@ a:focus {
 
 .c {
 	background: #444;
-	overflow: auto;
 	padding: 0 1em 0 1em;
-	box-shadow: inset 10px 0 20px rgba(0, 0, 0, .4);
+	box-shadow: inset 10px 0 20px rgba(0, 0, 0, 0.4);
 }
 
 .c-inner {
@@ -106,6 +105,7 @@ a:focus {
 
 .c-filters li {
 	display: inline;
+	float: left;
 }
 
 .c-filters a {
@@ -116,18 +116,23 @@ a:focus {
 	list-style: none;
 	padding-left: 0;
 	width: 100%;
-	overflow-x: hidden;
-	overflow-y: auto;
 }
 
 .c-search {
 	background: transparent;
 	border: none;
 	border-bottom: 1px dotted #888;
+	border-radius: 0;
 	color: #DDD;
-	padding: 0 0 0 2em;
+	padding: 1em 0 0 2em;
 	height: 1.67em;
 	width: 100%;
+}
+
+.c-project {
+	color: #444;
+	position: relative;
+	text-shadow: 0 0 0.67em #DDD;
 }
 
 .selected,

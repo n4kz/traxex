@@ -23,6 +23,7 @@ request = (options) ->
 
 	null
 
+# Call API method
 call = (method, options = {}, callback) ->
 	options.stream ?= Traxex.config.stream if Traxex.config
 
@@ -41,7 +42,8 @@ call = (method, options = {}, callback) ->
 
 	null
 
-for method in ['getTagStream', 'getLinkStream', 'getTagMark', 'getLinkMark', 'getMark', 'getConfig', 'getUser']
+# Create shortcuts for API method calls
+for method in ['getTagStream', 'getLinkStream', 'getMark', 'getConfig', 'getUser', 'getSubscriptions', 'getMessage']
 	((method) ->
 		Traxex[method] = ->
 			call.apply(null, [method].concat(Array.prototype.slice.call(arguments)))

@@ -2,42 +2,54 @@ Traxex = @Traxex
 
 Traxex.model =
 	synced: 0
-	offset: 50
+	offset: null
+	projects: null
 	types: {}
 	issues: {}
 	comments: {}
 	ready: no
 
-	setup: (callback) ->
-		Traxex.getUser null, (error, result) =>
-			return Traxex.view.warn(error.message) if error
+	prepare: (callback) ->
+		Traxex.getConfig null, (error, result) =>
+			throw new Error(error.message) if error
 
-			Traxex.user = result
+			@offset = (Traxex.config = result.config).fetchCount
+			callback()
 
-			Traxex.getConfig null, (error, result) =>
-				throw new Error(error.message) if error
+	setup: (project, callback) ->
+		# Get config
+		unless @ready
+			return @prepare =>
+				@ready = yes
+				@setup(project, callback)
 
-				Traxex.config = result.config
+		# Fetch user's projects
+		unless @projects
+			return @fetchProjects =>
+				@setup(project, callback)
 
-				Traxex.getTagStream tag: ':type', (error, result) =>
-					throw new Error(error.message) if error
+		# Check access
+		unless @projects[project]
+			return Traxex.view.warn('Access denied')
 
-					for type in result.stream
-						@types[type.body] = type.id
+		Traxex.view.renderProject(project)
 
-					@ready = yes
-					callback()
+		# Load types
+		unless @types[project]
+			return @fetchTypes(project, callback)
 
-	check: (callback) ->
-		Traxex.getMark {}, (error, result) =>
+		callback()
+
+	check: (project, callback) ->
+		Traxex.getMark { stream: project }, (error, result) =>
 			mark = +result.mark
 
 			if @synced < mark
 				remains = 0
 
-				for own type of @types
+				for own type of @types[project]
 					remains++
-					@fetchIssues 0, type, ->
+					@fetchIssues project, 0, type, ->
 						unless --remains
 							callback(yes)
 
@@ -45,9 +57,30 @@ Traxex.model =
 			else
 				callback(no)
 
-	fetchIssues: (mark, type, callback) ->
-		options = message: @types[type]
+	fetchProjects: (callback) ->
+		Traxex.getSubscriptions null, (error, result) =>
+			return Traxex.view.warn(error.message) if error
+
+			@projects = {}
+			@projects[project] = yes for project in result.streams
+
+			callback()
+
+	fetchTypes: (project, callback) ->
+		Traxex.getTagStream { stream: project, tag: ':type' }, (error, result) =>
+			throw new Error(error.message) if error
+
+			@types[project] = {}
+
+			for type in result.stream
+				@types[project][type.body] = type.id
+
+			callback()
+
+	fetchIssues: (project, mark, type, callback) ->
+		options = message: @types[project][type]
 		options.mark = mark if mark
+		options.stream = project
 
 		Traxex.getLinkStream options, (error, result) =>
 			for issue in result.stream
@@ -57,9 +90,18 @@ Traxex.model =
 				@issues[issue.id] = issue
 
 			if result.stream.length is @offset
-				@fetchIssues result.stream[result.stream.length - 1].time, type, callback
+				@fetchIssues project, result.stream[result.stream.length - 1].time, type, callback
 			else
 				callback()
+
+	fetchIssue: (id, callback) ->
+		return callback(@issues[id]) if @issues[id]
+
+		Traxex.getMessage message: id, (error, result) =>
+			unless result and result.meta.type is 'issue'
+				result = null
+
+			callback(result)
 
 	fetchComments: (id, mark, callback) ->
 		options = message: id

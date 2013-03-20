@@ -23,6 +23,7 @@ each = (name, container, action) ->
 		search       : 'c-search'
 		issues       : 'c-issues'
 		filters      : 'c-filters'
+		project      : 'c-project'
 		issueN       : 'c-issues-issue-'
 		inner        : 'd-inner'
 		message      : 'd-inner-message'
@@ -40,6 +41,7 @@ each = (name, container, action) ->
 		@filters = find(@_.filters)[0]
 		@inner   = find(@_.inner)[0]
 		@input   = find(@_.search)[0]
+		@project = find(@_.project)[0]
 
 		@input.removeAttribute('style')
 
@@ -51,6 +53,11 @@ each = (name, container, action) ->
 			@classList.remove('selected')
 
 		empty(@issues)
+
+	renderProject: (project) ->
+		@setup() unless @ready
+
+		@project.innerHTML = project
 
 	# Render filter list
 	renderFilters: (data) ->
@@ -118,8 +125,6 @@ each = (name, container, action) ->
 				@hidden.push(issue)
 			else
 				issue.node.classList.remove('hidden')
-
-		return
 
 	# Render selected issue on left side
 	open: (id) ->
