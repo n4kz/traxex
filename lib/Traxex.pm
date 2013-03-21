@@ -207,8 +207,8 @@ Alleria->focus('message::command' => sub {
 				$self->message({
 					to   => $_,
 					body => $issue?
-						"New comment with #$id was added to issue #$issue by $author":
-						"New issue #$id was opened by $author",
+						"New comment #$id was added to issue #$issue by $author in project $project":
+						"New issue #$id was opened by $author in project $project",
 				});
 			}
 		}
@@ -434,6 +434,9 @@ Alleria->focus('message::command' => sub {
 				}
 
 				default {
+					return message "Read #help project"
+						if $args;
+
 					# Try to create new project
 					my ($response) = $vermishel->createStream({ stream => $project });
 

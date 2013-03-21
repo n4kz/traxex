@@ -1,9 +1,9 @@
 Traxex = @Traxex
 
 Traxex.model =
-	synced: 0
 	offset: null
 	projects: null
+	synced: {}
 	types: {}
 	issues: {}
 	comments: {}
@@ -44,7 +44,7 @@ Traxex.model =
 		Traxex.getMark { stream: project }, (error, result) =>
 			mark = +result.mark
 
-			if @synced < mark
+			if not @synced[project] or @synced[project] < mark
 				remains = 0
 
 				for own type of @types[project]
@@ -53,7 +53,7 @@ Traxex.model =
 						unless --remains
 							callback(yes)
 
-				@synced = mark
+				@synced[project] = mark
 			else
 				callback(no)
 
@@ -97,7 +97,7 @@ Traxex.model =
 	fetchIssue: (id, callback) ->
 		return callback(@issues[id]) if @issues[id]
 
-		Traxex.getMessage message: id, (error, result) =>
+		Traxex.getMessage message: id, (error, result) ->
 			unless result and result.meta.type is 'issue'
 				result = null
 

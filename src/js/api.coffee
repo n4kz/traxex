@@ -6,12 +6,12 @@ request = (options) ->
 	r.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
 	r.setRequestHeader('Accept', 'application/json')
 	r.onreadystatechange = ->
-		return unless @readyState is 4
-
-		if @status is 200
-			options.success(JSON.parse(@response))
-		else
-			options.error()
+		if @readyState is 4
+			if @status is 200
+				options.success(JSON.parse(@response))
+			else
+				options.error()
+		return
 
 	data = ''
 
@@ -21,30 +21,32 @@ request = (options) ->
 
 	r.send(data or null)
 
-	null
+	return
 
 # Call API method
-call = (method, options = {}, callback) ->
-	options.stream ?= Traxex.config.stream if Traxex.config
-
+call = (method, options, callback) ->
 	request
 		url: '/_?method=' + method
-		data: options
+		data: options || {}
 
 		success: (data) ->
 			callback(data.error, data.result)
+			return
 
 		error: ->
 			callback
 				error:
 					code: '100'
 					message: 'Internal error'
+			return
 
-	null
+	return
 
 # Create shortcuts for API method calls
 for method in ['getTagStream', 'getLinkStream', 'getMark', 'getConfig', 'getUser', 'getSubscriptions', 'getMessage']
 	((method) ->
-		Traxex[method] = ->
-			call.apply(null, [method].concat(Array.prototype.slice.call(arguments)))
+		Traxex[method] = (options, callback) ->
+			call(method, options, callback)
+			return
+		return
 	)(method)

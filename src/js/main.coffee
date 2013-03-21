@@ -15,12 +15,15 @@ Traxex = @Traxex =
 			return
 
 		if changes
-			@view.render()
+			@view.render(@project)
+			@view.open(id)
 
 			if id
-				@model.fetchComments id, 0, =>
-					@view.open(id) if initial
+				if initial and @model.comments[id]
 					@view.update()
+				else
+					@model.fetchComments id, 0, =>
+						@view.update()
 
 		@timer = setTimeout((=>
 			@model.check @project, =>
@@ -38,27 +41,42 @@ Traxex = @Traxex =
 				# Render filters
 				@view.renderFilters @model.types[project]
 
-				# Get data for the first time
-				@model.check project, =>
+				# Check project for updates
+				if @model.synced[project]
 					@update(yes, yes)
+				else
+					@model.check project, =>
+						@update(yes, yes)
 
 	# Filter issue list
 	$render: (filter) ->
-		Traxex.view.render(filter)
-		Traxex.view.search()
+		@view.render(@project, filter)
+		@view.search()
 
 	# Show issue details
 	$open: (id) ->
-		return if id is Traxex.view.current
+		return if id is @view.current
 
-		Traxex.view.open(id)
+		issue = @model.issues[id]
+
+		@view.open(id)
 		return unless id
 
-		if Traxex.model.comments[id]
-			Traxex.view.update()
+		if not issue
+			@project = @view.current = null
+			@update(true, true)
+			return
+
+		if issue.stream isnt @project
+			@view.current = null
+			@$select(issue.stream)
+			return
+
+		if @model.comments[id]
+			@view.update()
 		else
-			Traxex.model.fetchComments id, 0, ->
-				Traxex.view.update()
+			@model.fetchComments id, 0, =>
+				@view.update()
 
 Gator(document).on 'readystatechange', ->
 	return if document.readyState isnt 'complete'

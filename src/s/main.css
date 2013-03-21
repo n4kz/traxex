@@ -99,7 +99,6 @@ a:focus {
 
 .c-filters {
 	padding: 0 0 0 2em;
-	margin-bottom: 1.17em;
 	list-style: none;
 }
 
@@ -130,9 +129,9 @@ a:focus {
 }
 
 .c-project {
-	color: #444;
+	color: transparent;
 	position: relative;
-	text-shadow: 0 0 0.67em #DDD;
+	text-shadow: 0 0 0.67em #DDD, 0 0 0 #000;
 }
 
 .selected,

@@ -4,18 +4,23 @@ render = (html) ->
 	container.innerHTML = String(html)
 	return container.childNodes
 
-find = (name, container = document) ->
-	return container.getElementsByClassName(name)
+find = (name, container) ->
+	return (container or document).getElementsByClassName(name)
 
 empty = (node) ->
 	node.innerHTML = ''
+	return
 
 template = (name, data = {}) ->
 	return render(Ulfsaar[name](data))[0]
 
 each = (name, container, action) ->
-	elements = find(name, container)
-	action.call(element) for element in elements
+	action.call(element) for element in find(name, container)
+	return
+
+set = (node, name, set) ->
+	node.classList[`set? 'add' : 'remove'`](name)
+	return
 
 @Traxex.view =
 	_:
@@ -29,7 +34,7 @@ each = (name, container, action) ->
 		message      : 'd-inner-message'
 		comments     : 'd-comments'
 
-	ready: no
+	ready: 0
 	filter: null
 	current: 0
 	filtered: []
@@ -40,34 +45,35 @@ each = (name, container, action) ->
 		@issues  = find(@_.issues)[0]
 		@filters = find(@_.filters)[0]
 		@inner   = find(@_.inner)[0]
-		@input   = find(@_.search)[0]
 		@project = find(@_.project)[0]
 
-		@input.removeAttribute('style')
+		find(@_.search)[0].removeAttribute('style')
 
-		@ready = yes
+		@ready = 1
+		return
 
 	# Reset filters
 	reset: ->
 		each 'action', @filters, ->
-			@classList.remove('selected')
+			set(@, 'selected', no)
 
 		empty(@issues)
+		return
 
 	renderProject: (project) ->
 		@setup() unless @ready
 
 		@project.innerHTML = project
+		return
 
 	# Render filter list
 	renderFilters: (data) ->
 		@setup() unless @ready
 
-		filters = ['all']
+		filters = Object.keys(data).sort (a, b) ->
+			`data[a] > data[b]? 1 : -1`
 
-		for own key of data
-			filters.unshift(key)
-
+		filters.push('all')
 		@filter = filters[0]
 
 		empty(@filters)
@@ -75,33 +81,39 @@ each = (name, container, action) ->
 		for filter in filters
 			@filters.appendChild template 'filter', filter: filter
 
+		return
+
 	# Render issues by type
-	render: (type = @filter) ->
+	render: (project, type = @filter) ->
 		@setup() unless @ready
 		@reset()
 
 		@filter = type
 
 		each 'action', @filters, ->
-			@classList.add('selected') if @getAttribute('data-action') is "render:#{type}"
+			set(@, 'selected', yes) if @getAttribute('data-action') is "render:#{type}"
 
 		@filtered = issues = []
 
-		for own id, issue of Traxex.model.issues when type is 'all' or issue[type]
-			issues.push(issue)
+		for own id, issue of Traxex.model.issues
+			if issue.stream is project and (type is 'all' or issue[type])
+				issues.push(issue)
 
 		issues = issues.sort (a, b) ->
-			`a.id > b.id? -1 : (b.id > a.id? 1 : 0)`
+			`a.id < b.id? 1 : -1`
 
 		for issue in issues
 
 			unless issue.node
-				issue.selected = issue.id is @current
 				issue.type = @_.issueN + issue.id
 				issue.node = template 'issue', issue
 				issue.text = issue.node.textContent.toLowerCase()
 
+			set(issue.node, 'selected', issue.id is @current)
+
 			@issues.appendChild issue.node
+
+		return
 
 	search: (query) ->
 		hidden  = @hidden
@@ -115,16 +127,18 @@ each = (name, container, action) ->
 		unless query
 			if hidden.length
 				for issue in hidden
-					issue.node.classList.remove('hidden')
+					set(issue.node, 'hidden', no)
 
 			return
 
 		for issue in @filtered
 			unless ~issue.text.indexOf(query)
-				issue.node.classList.add('hidden')
+				set(issue.node, 'hidden', yes)
 				@hidden.push(issue)
 			else
-				issue.node.classList.remove('hidden')
+				set(issue.node, 'hidden', no)
+
+		return
 
 	# Render selected issue on left side
 	open: (id) ->
@@ -141,24 +155,19 @@ each = (name, container, action) ->
 		issues = @issues.childNodes
 
 		for element in issues
-			list = element.classList
-
-			if list.contains(@_.issueN + id)
-				list.add('selected')
-			else
-				list.remove('selected')
+			set(element, 'selected', element.classList.contains(@_.issueN + id))
 
 		@inner.appendChild(template('header', issue))
 		@inner.appendChild(template('comments'))
+		return
 
 	# Update issue comments on left side
 	update: ->
-		id = @current
-		data = Traxex.model.comments[id]
-		return unless id
+		data = Traxex.model.comments[@current]
 		return unless data
 
 		@inner.replaceChild(template('comments', comments: data), find(@_.comments, @inner)[0])
+		return
 
 	# Warn about error
 	warn: (text) ->
@@ -166,7 +175,7 @@ each = (name, container, action) ->
 
 		empty(@inner)
 		@inner.appendChild template 'message', message: text
-
+		return
 
 Ulfsaar.time = (scope) ->
 	return (new Date(scope('time'))).toLocaleString()
@@ -207,7 +216,7 @@ Ulfsaar 'comments', '''
 '''
 
 Ulfsaar 'issue', '''
-	<li class="c-issues-issue {{type}}{{#selected}} selected{{/selected}}">
+	<li class="c-issues-issue {{type}}">
 		<span class=c-issues-issue-number>{{>number}}</span>&nbsp;
 		<span class=c-issues-issue-name>{{>body}}</span>
 	</li>
