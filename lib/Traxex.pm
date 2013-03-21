@@ -99,14 +99,24 @@ Alleria->load('commands')->commands({
 
 	show => {
 		arguments   => '[<id> | <project> <type> | comments <id>]',
-		description => 'Show all open issues, issue/comment by id or issues by type',
+		description => 'Show all issues with default type, issue/comment by id or issues by type',
 	},
 
-	projects => 'Show available projects',
+	projects => 'List available to user projects',
+
+	list => 'List all projects',
 
 	project => {
 		arguments   => '<name> [<command>] [arguments]',
-		description => 'Manage project',
+		description => <<''
+Manage project
+Commands:
+- create
+- grant  <jid>
+- revoke <jid>
+- type <type>
+- types
+
 	},
 
 	auth => 'Get authentication url',
@@ -207,8 +217,8 @@ Alleria->focus('message::command' => sub {
 				$self->message({
 					to   => $_,
 					body => $issue?
-						"New comment #$id was added to issue #$issue by $author in project $project":
-						"New issue #$id was opened by $author in project $project",
+						"New comment #$id was added to issue #$issue by $author in $project":
+						"New issue #$id was opened by $author in $project",
 				});
 			}
 		}
@@ -282,7 +292,7 @@ Alleria->focus('message::command' => sub {
 			foreach (grep { $_ ne $author } $self->roster('online')) {
 				$self->message({
 					to   => $_,
-					body => "Issue #$issue was marked as $type by $author",
+					body => "Issue #$issue was marked as $type by $author in $project",
 				});
 			}
 		}
@@ -343,13 +353,22 @@ Alleria->focus('message::command' => sub {
 			} reverse @results;
 		}
 
-		# List all projects
-		# TODO: list projects for another user
+		# List user's projects
 		when ('projects') {
 			my (@subscriptions) = $redis->smembers($config->{'redis'}{'keys'}{'user'}{'subscriptions'}. $message->{'from'}); 
 
-			return message join ', ', @subscriptions
+			return message join ', ', sort @subscriptions
 				if @subscriptions;
+
+			message 'No projects found';
+		}
+
+		# List all projects
+		when ('list') {
+			my (@projects) = $redis->smembers($config->{'redis'}{'keys'}{'streams'});
+
+			return message join ', ', sort @projects
+				if @projects;
 
 			message 'No projects found';
 		}
@@ -362,7 +381,6 @@ Alleria->focus('message::command' => sub {
 				unless $project;
 
 			given ($command) {
-
 				# Reload and list all types
 				when ('types') {
 					my $error = types $project;
@@ -370,7 +388,7 @@ Alleria->focus('message::command' => sub {
 					return message $error
 						if $error;
 
-					message join ', ', keys %{ $types->{$project} };
+					message join ', ', sort { $types->{$project}{$a} <=> $types->{$project}{$b} } keys %{ $types->{$project} };
 				}
 
 				# Create new type
@@ -433,17 +451,18 @@ Alleria->focus('message::command' => sub {
 					}
 				}
 
-				default {
-					return message "Read #help project"
-						if $args;
-
-					# Try to create new project
+				# Create new project
+				when ('create') {
 					my ($response) = $vermishel->createStream({ stream => $project });
 
-					return message $response->{'error'}{'message'}
+					return error $response->{'error'}{'message'}
 						if $response->{'error'};
 
 					message "Project $project created";
+				}
+
+				default {
+					return message 'Read #help';
 				}
 			}
 		}
