@@ -35,10 +35,10 @@ set = (node, name, set) ->
 		comments     : 'd-comments'
 
 	ready: 0
-	filter: null
 	current: 0
 	filtered: []
 	hidden: []
+	filter: {}
 
 	# Prepare view
 	setup: ->
@@ -52,14 +52,6 @@ set = (node, name, set) ->
 		@ready = 1
 		return
 
-	# Reset filters
-	reset: ->
-		each 'action', @filters, ->
-			set(@, 'selected', no)
-
-		empty(@issues)
-		return
-
 	renderProject: (project) ->
 		@setup() unless @ready
 
@@ -67,34 +59,35 @@ set = (node, name, set) ->
 		return
 
 	# Render filter list
-	renderFilters: (data) ->
+	renderFilters: (project, data) ->
 		@setup() unless @ready
 
 		filters = Object.keys(data).sort (a, b) ->
 			`data[a] > data[b]? 1 : -1`
 
 		filters.push('all')
-		@filter = filters[0]
+		@filter[project] = @filter[project] or filters[0]
 
 		empty(@filters)
 
 		for filter in filters
-			@filters.appendChild template 'filter', filter: filter
+			@filters.appendChild template 'filter', name: filter
 
 		return
 
 	# Render issues by type
-	render: (project, type = @filter) ->
+	render: (project, type) ->
 		@setup() unless @ready
-		@reset()
 
-		@filter = type
+		@filter[project] = type = type or @filter[project]
 
+		# Update type filters
 		each 'action', @filters, ->
-			set(@, 'selected', yes) if @getAttribute('data-action') is "render:#{type}"
+			set(@, 'selected', @getAttribute('data-action') is "render:#{type}")
 
 		@filtered = issues = []
 
+		# Filter issues by project and type
 		for own id, issue of Traxex.model.issues
 			if issue.stream is project and (type is 'all' or issue[type])
 				issues.push(issue)
@@ -102,8 +95,10 @@ set = (node, name, set) ->
 		issues = issues.sort (a, b) ->
 			`a.id < b.id? 1 : -1`
 
-		for issue in issues
+		empty(@issues)
 
+		# Render issues
+		for issue in issues
 			unless issue.node
 				issue.type = @_.issueN + issue.id
 				issue.node = template 'issue', issue
@@ -113,30 +108,19 @@ set = (node, name, set) ->
 
 			@issues.appendChild issue.node
 
+		# Restore search filter
+		@search()
+
 		return
 
 	search: (query) ->
-		hidden  = @hidden
-		@hidden = []
-
 		if query is undefined
 			query = @lastSearch or ''
 		else
 			@lastSearch = query = query.toLowerCase()
 
-		unless query
-			if hidden.length
-				for issue in hidden
-					set(issue.node, 'hidden', no)
-
-			return
-
 		for issue in @filtered
-			unless ~issue.text.indexOf(query)
-				set(issue.node, 'hidden', yes)
-				@hidden.push(issue)
-			else
-				set(issue.node, 'hidden', no)
+			set(issue.node, 'hidden', not ~issue.text.indexOf(query))
 
 		return
 
@@ -189,7 +173,7 @@ Ulfsaar 'message', '<h1 class=d-inner-message>{{message}}</h1>'
 
 Ulfsaar 'filter', '''
 	<li>
-		<a class=action data-action=render:{{filter}} href=javascript:void(0)>{{filter}}</a>
+		<a class=action data-action=render:{{name}} href=javascript:void(0)>{{name}}</a>
 	</li>
 '''
 

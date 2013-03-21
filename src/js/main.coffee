@@ -30,16 +30,12 @@ Traxex = @Traxex =
 				@update(arguments[0])
 		), @config.timeout)
 
-	###
-		Actions
-	###
-
 	# Select another project
 	$select: (project) ->
 		if project isnt @project
 			@model.setup @project = project, =>
 				# Render filters
-				@view.renderFilters @model.types[project]
+				@view.renderFilters project, @model.types[project]
 
 				# Check project for updates
 				if @model.synced[project]
@@ -64,7 +60,7 @@ Traxex = @Traxex =
 
 		if not issue
 			@project = @view.current = null
-			@update(true, true)
+			@update(yes, yes)
 			return
 
 		if issue.stream isnt @project
