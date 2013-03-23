@@ -5,6 +5,7 @@ request = (options) ->
 	r.open('POST', options.url)
 	r.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
 	r.setRequestHeader('Accept', 'application/json')
+	r.setRequestHeader('X-Requested-With', 'XMLHttpRequest')
 	r.onreadystatechange = ->
 		if @readyState is 4
 			if @status is 200
