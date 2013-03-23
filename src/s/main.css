@@ -9,6 +9,10 @@ html {
 	height: 100%;
 }
 
+ul {
+	list-style: none;
+}
+
 a,
 a:visited,
 a:focus {
@@ -20,7 +24,7 @@ a:focus {
 .d a,
 .d a:visited,
 .d a:focus {
-	color: #BABABA;
+	color: #BBB;
 }
 
 .d,
@@ -33,22 +37,26 @@ a:focus {
 .d {
 	background: #888;
 	float: left;
+	position: relative;
 	width: 65%;
+}
+
+.d-anchor, .d-projects {
+	position: absolute;
+	top: 0.67em;
+	right: 0.67em;
+}
+
+.d-projects{
+	top: 1.67em;
+	text-align: right;
 }
 
 .d-inner {
 	padding: 0.67em;
 }
 
-.d-inner-message {
-	position: relative;
-	left: 1em;
-	top: 1em;
-	display: table;
-}
-
 .d-comments {
-	list-style: none;
 	margin: 2em;
 	padding: 0;
 }
@@ -94,12 +102,10 @@ a:focus {
 
 .c-header {
 	width: 100%;
-	text-align: middle;
 }
 
 .c-filters {
 	padding: 0 0 0 2em;
-	list-style: none;
 }
 
 .c-filters li {
@@ -112,7 +118,6 @@ a:focus {
 }
 
 .c-issues {
-	list-style: none;
 	padding-left: 0;
 	width: 100%;
 }

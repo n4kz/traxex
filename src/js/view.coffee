@@ -24,17 +24,14 @@ set = (node, name, set) ->
 
 @Traxex.view =
 	_:
-		control      : 'c'
 		search       : 'c-search'
 		issues       : 'c-issues'
 		filters      : 'c-filters'
 		project      : 'c-project'
 		issueN       : 'c-issues-issue-'
 		inner        : 'd-inner'
-		message      : 'd-inner-message'
 		comments     : 'd-comments'
 
-	ready: 0
 	current: 0
 	filtered: []
 	hidden: []
@@ -49,19 +46,18 @@ set = (node, name, set) ->
 
 		find(@_.search)[0].removeAttribute('style')
 
-		@ready = 1
 		return
 
 	renderProject: (project) ->
-		@setup() unless @ready
-
 		@project.innerHTML = project
+		return
+
+	renderProjects: ->
+		@inner.innerHTML = Ulfsaar.projects(list: Object.keys(Traxex.model.projects or {}).sort())
 		return
 
 	# Render filter list
 	renderFilters: (project, data) ->
-		@setup() unless @ready
-
 		filters = Object.keys(data).sort (a, b) ->
 			`data[a] > data[b]? 1 : -1`
 
@@ -77,7 +73,7 @@ set = (node, name, set) ->
 
 	# Render issues by type
 	render: (project, type) ->
-		@setup() unless @ready
+		return unless project
 
 		@filter[project] = type = type or @filter[project]
 
@@ -128,18 +124,20 @@ set = (node, name, set) ->
 	open: (id) ->
 		return if id and @current is id
 
-		issue    = Traxex.model.issues[id]
-		comments = Traxex.model.comments[id] or []
+		issue = Traxex.model.issues[id]
 
-		empty(@inner)
-		return unless issue
-
-		@current = location.hash = Number(id)
+		@current = location.hash = `id? Number(id) : ''`
 
 		issues = @issues.childNodes
 
 		for element in issues
 			set(element, 'selected', element.classList.contains(@_.issueN + id))
+
+		unless issue
+			@renderProjects()
+			return
+
+		empty(@inner)
 
 		@inner.appendChild(template('header', issue))
 		@inner.appendChild(template('comments'))
@@ -153,14 +151,6 @@ set = (node, name, set) ->
 		@inner.replaceChild(template('comments', comments: data), find(@_.comments, @inner)[0])
 		return
 
-	# Warn about error
-	warn: (text) ->
-		@setup() unless @ready
-
-		empty(@inner)
-		@inner.appendChild template 'message', message: text
-		return
-
 Ulfsaar.time = (scope) ->
 	return (new Date(scope('time'))).toLocaleString()
 
@@ -169,12 +159,20 @@ Ulfsaar.body = (scope) ->
 
 Ulfsaar 'number', '<a class=action data-action=open:{{id}} href=#{{id}}>#{{id}}</a>'
 
-Ulfsaar 'message', '<h1 class=d-inner-message>{{message}}</h1>'
-
 Ulfsaar 'filter', '''
 	<li>
 		<a class=action data-action=render:{{name}} href=javascript:void(0)>{{name}}</a>
 	</li>
+'''
+
+Ulfsaar 'projects', '''
+	<ul class=d-projects>
+		{{#list}}
+			<li>
+				<a class=action data-action=select:{{.}} href=javascript:void(0)>{{.}}</a>
+			</li>
+		{{/list}}
+	</ul>
 '''
 
 Ulfsaar 'header', '''

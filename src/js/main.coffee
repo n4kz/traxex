@@ -11,7 +11,14 @@ Traxex = @Traxex =
 		unless @project
 			if id
 				@model.fetchIssue id, (issue) =>
-					@$select issue.stream if issue
+					if issue
+						@$select issue.stream
+					else
+						@view.open()
+					return
+			else
+				@view.open()
+
 			return
 
 		if changes
@@ -56,7 +63,7 @@ Traxex = @Traxex =
 		issue = @model.issues[id]
 
 		@view.open(id)
-		return unless id
+		return @view.render() unless id
 
 		if not issue
 			@project = @view.current = null
@@ -90,4 +97,6 @@ Gator(document).on 'readystatechange', ->
 	Gator(window).on 'hashchange', ->
 		Traxex.$open(location.hash.slice(1))
 
-	Traxex.update(yes, yes)
+	Traxex.view.setup()
+	Traxex.model.setup null, ->
+		Traxex.update(yes, yes)

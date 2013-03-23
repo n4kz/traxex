@@ -28,9 +28,11 @@ Traxex.model =
 			return @fetchProjects =>
 				@setup(project, callback)
 
+		return callback() unless project
+
 		# Check access
 		unless @projects[project]
-			return Traxex.view.warn('Access denied')
+			return alert('Access denied')
 
 		Traxex.view.renderProject(project)
 
@@ -57,9 +59,11 @@ Traxex.model =
 			else
 				callback(no)
 
+			return
+
 	fetchProjects: (callback) ->
 		Traxex.getSubscriptions null, (error, result) =>
-			return Traxex.view.warn(error.message) if error
+			return alert(error.message) if error
 
 			@projects = {}
 			@projects[project] = yes for project in result.streams
@@ -84,24 +88,23 @@ Traxex.model =
 
 		Traxex.getLinkStream options, (error, result) =>
 			for issue in result.stream
-				continue if issue.meta.type isnt 'issue'
-
-				issue[type] = yes
-				@issues[issue.id] = issue
+				if issue.meta.type is 'issue'
+					issue[type] = yes
+					@issues[issue.id] = issue
 
 			if result.stream.length is @offset
 				@fetchIssues project, result.stream[result.stream.length - 1].time, type, callback
 			else
 				callback()
 
+			return
+
 	fetchIssue: (id, callback) ->
 		return callback(@issues[id]) if @issues[id]
 
+		# Fetch single message to get stream name
 		Traxex.getMessage message: id, (error, result) ->
-			unless result and result.meta.type is 'issue'
-				result = null
-
-			callback(result)
+			callback(if result and result.meta.type is 'issue' then result else null)
 
 	fetchComments: (id, mark, callback) ->
 		options = message: id
@@ -121,3 +124,5 @@ Traxex.model =
 				@fetchComments id, result.stream[result.stream.length - 1].time, callback
 			else
 				callback()
+
+			return
