@@ -1,0 +1,35 @@
+{
+	"host": "traxex.n4kz.com",
+	"base": "http://traxex.n4kz.com:8099",
+	"port": 8099,
+	"checkOrigin": true,
+	"timeout": 20000,
+
+	"clientConfig": ["fetchCount", "timeout"],
+
+	"worker": {
+		"event": "traxex:work",
+		"redis": {
+			"db": 6
+		}
+	},
+
+	"redis": {
+		"db": 6
+	},
+
+	"message": {
+		"types": {
+			"issue": true,
+			"comment": true,
+			"type": true,
+			"text": false
+		},
+
+		"defaultType": "issue"
+	},
+
+	"traxex": {
+		"auth": "traxex:auth:"
+	}
+}

@@ -1,9 +1,6 @@
 *.swp
 *.log
+*.conf
 src/js/*.js
 public/index.html
 vermishel
-vermishel.json
-weaver.json
-xmpp.conf
-access.conf

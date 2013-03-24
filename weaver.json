@@ -1,0 +1,38 @@
+{
+	"tasks": {
+		"api": {
+			"count": 1,
+			"source": "vermishel/lib/main.js",
+			"arguments": ["--config", "../config/"],
+			"env": {
+				"NODE_ENV": "local"
+			}
+		},
+
+		"bot": {
+			"count": 1,
+			"source": "script/traxex.pl",
+			"executable": true,
+			"env": {
+				"PERL5LIB": true
+			}
+		},
+
+		"auth": {
+			"count": 1,
+			"source": "coffee",
+			"executable": true,
+			"arguments": ["auth.coffee"],
+			"env": {
+				"NODE_PATH": true
+			}
+		},
+
+		"redis": {
+			"count": 1,
+			"source": "redis-cli",
+			"executable": true,
+			"arguments": ["monitor"]
+		}
+	}
+}
