@@ -11,8 +11,14 @@ my $vermishel = Vermishel::Client->new(%{ $config->{'vermishel'} });
 my $types     = {};
 my $defaults  = {};
 
-my $redis     = Redis->new(ecoding => undef);
-$redis->select($config->{'redis'}{'db'} //= 0);
+my $redis = Redis->new(
+	ecoding    => undef,
+	reconnect  => 90,
+	every      => 5000,
+	on_connect => sub {
+		$_[0]->select($config->{'redis'}{'db'} //= 0);
+	},
+);
 
 $vermishel->authenticate();
 
@@ -345,6 +351,8 @@ Alleria->focus('message::command' => sub {
 			}
 
 			message join $/, map {
+				utf8::decode($_->{'body'});
+
 				sprintf '#%i (%i) %s', grep {
 					s{</?\w+.*?>} {}ig or 1
 				} @{ $_ }{qw{ id linked body }}
