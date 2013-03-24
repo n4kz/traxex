@@ -1,4 +1,4 @@
-#!/usr/bin/perl -Ilib
+#!/usr/bin/perl -Ilib -w
 use Getopt::Long;
 use Alleria;
 use Alleria::Core 'strict';
@@ -7,6 +7,7 @@ my %options;
 GetOptions(\%options, 'daemon', 'logfile=s');
 
 my $xmpp = do 'xmpp.conf';
+my $chat = do 'chat.conf';
 
 my $bot = Alleria->new(
 	logfile  => $options{'logfile'}  || 'traxex.log',
@@ -30,7 +31,9 @@ $bot->load('daemon')->daemonize()
 
 $bot->start();
 
-$bot->join('vermishel@conference.n4kz.com' => { nick => 'traxex' });
+while (my ($room, $nick) = each %$chat) {
+	$bot->join($room => { nick => $nick });
+}
 
 while ($bot->ok()) {
 	# Main loop
