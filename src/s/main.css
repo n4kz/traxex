@@ -90,6 +90,10 @@ a:focus {
 	margin: 0;
 }
 
+.d-header img {
+	vertical-align: top;
+}
+
 .c {
 	background: #444;
 	padding: 0 1em 0 1em;
@@ -120,6 +124,11 @@ a:focus {
 .c-issues {
 	padding-left: 0;
 	width: 100%;
+}
+
+.c-issues img {
+	max-height: 4em;
+	vertical-align: middle;
 }
 
 .c-search {
