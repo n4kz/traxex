@@ -4,17 +4,16 @@ argv = (optimist = require('optimist'))
 	.default('port', 8199)
 	.default('path', '/auth')
 	.default('base', '/')
-	.default('cookie', 'vermishel')
 	.boolean(['help'])
 	.describe
 		help    : 'Show help and exit'
 		port    : 'Use specified port'
-		cookie  : 'Session cookie name'
 		path    : 'Request url'
 		base    : 'Redirect url'
 	.argv
 
-config = require('./config/traxex')
+config = require('./vermishel/lib/config')
+config = config(config({}, 'vermishel/config/main'), 'config')
 redis = redis.createClient(config.redis.port, config.redis.host)
 redis.select(config.redis.db) if config.redis.db
 
@@ -35,7 +34,7 @@ if argv.help
 			else if result
 				secret = crypto.createHash('md5').update(Date.now() + result).digest('hex')
 				@cookie
-					name: argv.cookie
+					name: 'vermishel'
 					domain: config.host
 					value: secret
 
