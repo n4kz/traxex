@@ -9,18 +9,15 @@ Traxex.model =
 	comments: {}
 	ready: no
 
-	prepare: (callback) ->
-		Traxex.getConfig null, (error, result) =>
-			throw new Error(error.message) if error
-
-			@offset = (Traxex.config = result.config).fetchCount
-			callback()
-
 	setup: (project, callback) ->
 		# Get config
 		unless @ready
-			return @prepare =>
+			return Traxex.getConfig null, (error, result) =>
+				throw new Error(error.message) if error
+
+				@offset = (Traxex.config = result.config).fetchCount
 				@ready = yes
+
 				@setup(project, callback)
 
 		# Fetch user's projects
@@ -44,11 +41,12 @@ Traxex.model =
 
 	check: (project, callback) ->
 		Traxex.getMark { stream: project }, (error, result) =>
-			mark = +result.mark
+			mark = if error then 0 else +result.mark
 
 			if not @synced[project] or @synced[project] < mark
 				remains = 0
 
+				# TODO: Fetch issues on demand
 				for own type of @types[project]
 					remains++
 					@fetchIssues project, 0, type, ->
@@ -56,8 +54,11 @@ Traxex.model =
 							callback(yes)
 
 				@synced[project] = mark
+
+				# No types in project
+				callback() unless remains
 			else
-				callback(no)
+				callback()
 
 			return
 
