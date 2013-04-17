@@ -10,6 +10,8 @@ my $config    = do 'traxex.conf';
 my $vermishel = Vermishel::Client->new(%{ $config->{'vermishel'} });
 my $types     = {};
 my $defaults  = {};
+my $access    = {};
+my $keys      = $config->{'redis'}{'keys'};
 
 my $redis = Redis->new(
 	ecoding    => undef,
@@ -31,6 +33,18 @@ sub message ($) {
 		body => $_[0],
 	});
 } # message
+
+# Do something if user has access
+sub let ($$$) {
+	my ($user, $project, $callback) = @_;
+
+	$access->{$project} //= {};
+	$access->{$project}{$user} = $redis->sismember($keys->{'user'}{'subscriptions'}. $user, $project)
+		unless exists $access->{$project}{$user};
+
+	&$callback()
+		if $access->{$project}{$user};
+} # let
 
 sub _error ($) { "API error: $_[0]" }
 sub error  ($) { message &_error }
@@ -219,13 +233,15 @@ Alleria->focus('message::command' => sub {
 			message join ' created with id #', $issue? 'Comment' : 'Issue', $id;
 
 			# Notify other users
-			foreach (grep { $_ ne $author } $self->roster('online')) {
-				$self->message({
-					to   => $_,
-					body => $issue?
-						"New comment #$id was added to issue #$issue by $author in $project":
-						"New issue #$id was opened by $author in $project",
-				});
+			foreach my $user (grep { $_ ne $author } $self->roster('online')) {
+				let $user, $project, sub {
+					$self->message({
+						to   => $user,
+						body => $issue?
+							"New comment #$id was added to issue #$issue by $author in $project":
+							"New issue #$id was opened by $author in $project",
+					});
+				};
 			}
 		}
 
@@ -295,11 +311,13 @@ Alleria->focus('message::command' => sub {
 			message "Marked #$issue as $type";
 
 			# Notify other users
-			foreach (grep { $_ ne $author } $self->roster('online')) {
-				$self->message({
-					to   => $_,
-					body => "Issue #$issue was marked as $type by $author in $project",
-				});
+			foreach my $user (grep { $_ ne $author } $self->roster('online')) {
+				let $user, $project, sub {
+					$self->message({
+						to   => $user,
+						body => "Issue #$issue was marked as $type by $author in $project",
+					});
+				};
 			}
 		}
 
@@ -363,7 +381,7 @@ Alleria->focus('message::command' => sub {
 
 		# List user's projects
 		when ('projects') {
-			my (@subscriptions) = $redis->smembers($config->{'redis'}{'keys'}{'user'}{'subscriptions'}. $message->{'from'}); 
+			my (@subscriptions) = $redis->smembers($keys->{'user'}{'subscriptions'}. $message->{'from'});
 
 			return message join ', ', sort @subscriptions
 				if @subscriptions;
@@ -373,7 +391,7 @@ Alleria->focus('message::command' => sub {
 
 		# List all projects
 		when ('list') {
-			my (@projects) = $redis->smembers($config->{'redis'}{'keys'}{'streams'});
+			my (@projects) = $redis->smembers($keys->{'streams'});
 
 			return message join ', ', sort @projects
 				if @projects;
@@ -424,13 +442,16 @@ Alleria->focus('message::command' => sub {
 					return message "User $user was not found in roster"
 						unless grep { $_ eq $user } $self->roster();
 
-					my $result = $redis->sadd($config->{'redis'}{'keys'}{'user'}{'subscriptions'}. $user, $project); 
+					my $result = $redis->sadd($keys->{'user'}{'subscriptions'}. $user, $project);
 
 					if ($result) {
 						$self->message({
 							to   => $user,
 							body => "Access to $project granted",
 						});
+
+						# Reset project cache
+						delete $access->{$project};
 
 						message 'Access granted';
 					} else {
@@ -445,13 +466,16 @@ Alleria->focus('message::command' => sub {
 					return message 'Jabber id required'
 						unless $user;
 
-					my $result = $redis->srem($config->{'redis'}{'keys'}{'user'}{'subscriptions'}. $user, $project); 
+					my $result = $redis->srem($keys->{'user'}{'subscriptions'}. $user, $project);
 
 					if ($result) {
 						$self->message({
 							to   => $user,
 							body => "Access to $project revoked",
-						}) if grep { $_ eq $user } $self->roster();
+						});
+
+						# Reset project cache
+						delete $access->{$project};
 
 						message 'Access revoked';
 					} else {
@@ -481,7 +505,7 @@ Alleria->focus('message::command' => sub {
 			my $url    = join '/auth?token=', $config->{'host'}, $secret;
 
 			# Save token to redis
-			$redis->setex($config->{'redis'}{'keys'}{'auth'}. $secret, 3600, $message->{'from'}, sub {});
+			$redis->setex($keys->{'auth'}. $secret, 3600, $message->{'from'}, sub {});
 
 			# Send auth url back
 			message $url;
