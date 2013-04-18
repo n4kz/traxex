@@ -2,6 +2,7 @@
 use Getopt::Long;
 use Alleria;
 use Alleria::Core 'strict';
+use open qw{ :std :utf8 };
 
 my %options;
 GetOptions(\%options, 'daemon', 'logfile=s');

@@ -34,17 +34,25 @@ sub message ($) {
 	});
 } # message
 
+sub admin () {
+	$self->accessible({
+		rule => 'roles',
+		name => 'admin',
+		from => $author,
+	});
+} # admin
+
 # Do something if user has access
-sub let ($$$) {
-	my ($user, $project, $callback) = @_;
+sub has_access ($$) {
+	my ($user, $project) = @_;
 
 	$access->{$project} //= {};
 	$access->{$project}{$user} = $redis->sismember($keys->{'user'}{'subscriptions'}. $user, $project)
 		unless exists $access->{$project}{$user};
 
-	&$callback()
-		if $access->{$project}{$user};
-} # let
+	local $author = $user;
+	return admin || $access->{$project}{$user};
+} # has_access
 
 sub _error ($) { "API error: $_[0]" }
 sub error  ($) { message &_error }
@@ -122,9 +130,10 @@ Alleria->load('commands')->commands({
 		description => 'Show all issues with default type, issue/comment by id or issues by type',
 	},
 
-	projects => 'List available to user projects',
-
-	list => 'List all projects',
+	projects => {
+		arguments   => '[jid]',
+		description => 'List all projects',
+	},
 
 	project => {
 		arguments   => '<name> [<command>] [arguments]',
@@ -201,6 +210,9 @@ Alleria->focus('message::command' => sub {
 					unless $args;
 			}
 
+			return message 'Access denied'
+				unless has_access $author, $project;
+
 			# Post message
 			my ($response) = $vermishel->createMessage({
 				stream => $project,
@@ -208,7 +220,7 @@ Alleria->focus('message::command' => sub {
 				meta   => to_json({
 					type   => $issue? 'comment' : 'issue',
 					author => {
-						jid  => (split '/', $author)[0],
+						jid  => $author,
 						name => (split '@', $author)[0],
 					},
 				}),
@@ -234,14 +246,12 @@ Alleria->focus('message::command' => sub {
 
 			# Notify other users
 			foreach my $user (grep { $_ ne $author } $self->roster('online')) {
-				let $user, $project, sub {
-					$self->message({
-						to   => $user,
-						body => $issue?
-							"New comment #$id was added to issue #$issue by $author in $project":
-							"New issue #$id was opened by $author in $project",
-					});
-				};
+				$self->message({
+					to   => $user,
+					body => $issue?
+						"New comment #$id was added to issue #$issue by $author in $project":
+						"New issue #$id was opened by $author in $project",
+				}) if has_access $user, $project;
 			}
 		}
 
@@ -260,6 +270,9 @@ Alleria->focus('message::command' => sub {
 				if $response->{'result'}{'meta'}{'type'} ne 'issue';
 
 			$project = $response->{'result'}{'stream'};
+
+			return message 'Access denied'
+				unless has_access $author, $project;
 
 			# Load types
 			$error = types $project
@@ -298,7 +311,7 @@ Alleria->focus('message::command' => sub {
 				meta    => to_json({
 					type   => 'comment',
 					author => {
-						jid  => (split '/', $author)[0],
+						jid  => $author,
 						name => (split '@', $author)[0],
 					},
 				})
@@ -312,18 +325,16 @@ Alleria->focus('message::command' => sub {
 
 			# Notify other users
 			foreach my $user (grep { $_ ne $author } $self->roster('online')) {
-				let $user, $project, sub {
-					$self->message({
-						to   => $user,
-						body => "Issue #$issue was marked as $type by $author in $project",
-					});
-				};
+				$self->message({
+					to   => $user,
+					body => "Issue #$issue was marked as $type by $author in $project",
+				}) if has_access $user, $project;
 			}
 		}
 
 		# Show issue or comment
 		when ('show') {
-			my (@results, $response, $issue);
+			my (@results, $response, $issue, $project);
 
 			given ($args) {
 				when (m{^\d+$}) {
@@ -332,6 +343,7 @@ Alleria->focus('message::command' => sub {
 					return error $response->{'error'}{'message'}
 						if $response->{'error'};
 
+					$project = $response->{'result'}{'stream'};
 					@results = $response->{'result'};
 				}
 
@@ -339,7 +351,7 @@ Alleria->focus('message::command' => sub {
 					when m{^comments +(.*)};
 
 				default {
-					my ($project, $type, $error);
+					my ($type, $error);
 
 					unless ($issue) {
 						($project, $type) = split m{ +}, $_, 2;
@@ -352,21 +364,33 @@ Alleria->focus('message::command' => sub {
 
 						$type ||= $defaults->{$project};
 
-						return message "Type $type was not found in project"
+						return message "Type $type was not found in project $project"
 							unless $types->{$project}{$type};
+					} else {
+						($response) = $vermishel->getMessage({ message => $issue });
+
+						return error $response->{'error'}{'message'}
+							if $response->{'error'};
+
+						$project ||= $response->{'result'}{'stream'};
 					}
 
 					# TODO: take number from config
-					while (not @results % 50) {
+					# TODO: pagination
+					# while (not @results % 50) {
 						($response) = $vermishel->getLinkStream({ message => $issue || $types->{$project}{$type} });
 
 						return error $response->{'error'}{'message'}
 							if $response->{'error'};
 
-						last unless push @results, @{ $response->{'result'}{'stream'} };
-					}
+					#	last unless
+						push @results, @{ $response->{'result'}{'stream'} };
+					#}
 				}
 			}
+
+			return message 'Access denied'
+				unless has_access $author, $project;
 
 			message join $/, map {
 				utf8::decode($_->{'body'});
@@ -379,19 +403,18 @@ Alleria->focus('message::command' => sub {
 			} reverse @results;
 		}
 
-		# List user's projects
-		when ('projects') {
-			my (@subscriptions) = $redis->smembers($keys->{'user'}{'subscriptions'}. $message->{'from'});
-
-			return message join ', ', sort @subscriptions
-				if @subscriptions;
-
-			message 'No projects found';
-		}
-
 		# List all projects
-		when ('list') {
-			my (@projects) = $redis->smembers($keys->{'streams'});
+		when ('projects') {
+			my ($user) = split m{ +}, $args;
+
+			undef $user
+				unless admin;
+
+			my (@projects) = $redis->smembers(
+				(admin and not $user)?
+					$keys->{'streams'}:
+					$keys->{'user'}{'subscriptions'}. ($user || $author)
+			);
 
 			return message join ', ', sort @projects
 				if @projects;
@@ -429,7 +452,7 @@ Alleria->focus('message::command' => sub {
 					return message $error
 						if $error;
 
-					message "New type $type was created";
+					message "New type $type was added to project $project";
 				}
 
 				# Grant access to project
@@ -501,11 +524,11 @@ Alleria->focus('message::command' => sub {
 
 		# Authentication
 		when ('auth') {
-			my $secret = md5_hex join ':', $$, $message->{'from'}, time, rand;
+			my $secret = md5_hex join ':', $$, $author, time, rand;
 			my $url    = join '/auth?token=', $config->{'host'}, $secret;
 
 			# Save token to redis
-			$redis->setex($keys->{'auth'}. $secret, 3600, $message->{'from'}, sub {});
+			$redis->setex($keys->{'auth'}. $secret, 3600, $author, sub {});
 
 			# Send auth url back
 			message $url;
