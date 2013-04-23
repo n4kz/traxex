@@ -125,6 +125,11 @@ Alleria->load('commands')->commands({
 		description => 'Mark issue as open or closed',
 	},
 
+	purge => {
+		arguments   => '<id>',
+		description => 'Delete issue or comment',
+	},
+
 	show => {
 		arguments   => '[<id> | <project> <type> | comments <id>]',
 		description => 'Show all issues with default type, issue/comment by id or issues by type',
@@ -401,6 +406,47 @@ Alleria->focus('message::command' => sub {
 			} grep {
 				not $issue or $_->{'meta'}{'type'} eq 'comment'
 			} reverse @results;
+		}
+
+		# Delete issue or comment
+		when ('purge') {
+			my $id = int $args;
+			my ($response) = $vermishel->getMessage({ message => $id });
+
+			return error $response->{'error'}{'message'}
+				if $response->{'error'};
+
+			my $item    = $response->{'result'};
+			my $project = $item->{'stream'};
+
+			# Check access to project
+			return message 'Access denied'
+				unless has_access $author, $project
+				and    $item->{'meta'}{'author'}{'jid'} eq $author;
+
+			# Check type
+			return message 'Wrong item type'
+				unless $item->{'meta'}{'type'} ~~ ['issue', 'comment'];
+
+			# Check linked items
+			return message 'Comments should be removed first'
+				if $item->{'linked'} > 1 and $item->{'meta'}{'type'} eq 'issue';
+
+			# Plan purge
+			($response) = $vermishel->deleteMessage({ message => $id });
+
+			return error $response->{'error'}{'message'}
+				if $response->{'error'};
+
+			message "Purged #$id";
+
+			# Notify other users
+			foreach my $user (grep { $_ ne $author } $self->roster('online')) {
+				$self->message({
+					to   => $user,
+					body => "Item #$id was purged by $author in project $project",
+				}) if has_access $user, $project;
+			}
 		}
 
 		# List all projects
