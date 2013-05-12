@@ -1,44 +1,32 @@
+all: public/index.html
+
 # Uglifyjs options
-UGLIFY=--compress --mangle
+UGLIFYOPTS=--compress --mangle
 
-all:
-	coffee --compile --lint src/js/*.coffee
-	uglifyjs src/js/lib/gator.js $(UGLIFY) >> public/build.js
-	cat src/js/lib/ulfsaar.min.js          >> public/build.js
-	uglifyjs src/js/main.js      $(UGLIFY) >> public/build.js
-	uglifyjs src/js/api.js       $(UGLIFY) >> public/build.js
-	uglifyjs src/js/model.js     $(UGLIFY) >> public/build.js
-	cat src/js/view.js | sed 's/\\n\t*//g'| uglifyjs $(UGLIFY) >> public/build.js
-	script/minify.pl src/s/normalize.css src/s/main.css > public/build.css
-	echo -n `cat src/index.html` | sed 's/> </></g' > public/index.html
-	echo -n '<style>'          >> public/index.html
-	cat public/build.css       >> public/index.html
-	echo -n '</style><script>' >> public/index.html
-	cat public/build.js        >> public/index.html
-	echo    '</script>'        >> public/index.html
-	rm public/build.*
+CSS=$(wildcard src/s/*.css)
+LIB=$(wildcard src/js/lib/*.js)
+SCRIPTS=$(wildcard src/js/*.coffee)
 
-clean:
-	rm -rf src/js/*.js
+DEBUG=
 
-debug:
-	# Coffee
-	coffee --compile --lint src/js/*.coffee
-	# Scripts
-	cat src/js/lib/gator.js                         >> public/build.js
-	cat src/js/lib/ulfsaar.min.js                   >> public/build.js
-	cat src/js/main.js                              >> public/build.js
-	cat src/js/api.js                               >> public/build.js
-	cat src/js/model.js                             >> public/build.js
-	cat src/js/view.js | sed 's/\\n\t*//g'          >> public/build.js
-	# Styles
-	cat src/s/normalize.css                          > public/build.css
-	cat src/s/main.css                              >> public/build.css
-	# Concat
-	echo -n `cat src/index.html` | sed 's/> </></g'  > public/index.html
-	echo -n '<style>'                               >> public/index.html
-	cat public/build.css                            >> public/index.html
-	echo -n '</style><script>'                      >> public/index.html
-	cat public/build.js                             >> public/index.html
-	echo    '</script>'                             >> public/index.html
-	rm public/build.*
+ifdef DEBUG
+UGLIFY=cat
+else
+UGLIFY=uglifyjs $(UGLIFYOPTS)
+endif
+
+public/build.css: $(CSS)
+	script/minify.pl $(CSS) > public/build.css
+
+public/build.js: $(LIB) $(SCRIPTS)
+	cat $(LIB) > public/build.js
+	coffee --compile --lint --print $(SCRIPTS) | $(UGLIFY) >> public/build.js
+
+public/index.html: src/index.html public/build.css public/build.js
+	cat src/index.html       > public/index.html
+	echo '<style>'          >> public/index.html
+	cat public/build.css    >> public/index.html
+	echo '</style><script>' >> public/index.html
+	cat public/build.js     >> public/index.html
+	echo '</script>'        >> public/index.html
+	rm -f public/build.js public/build.css

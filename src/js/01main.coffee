@@ -91,6 +91,21 @@ Gator(document).on 'readystatechange', ->
 
 		return no
 
+	Gator(document).on 'click', '.d-persona', ->
+		navigator.id.get (assertion) ->
+			Traxex.request
+				url: '/_auth'
+				data:
+					assertion: assertion
+				success: ->
+					Traxex.view.auth yes
+					Traxex.model.setup null, ->
+						Traxex.update(yes, yes)
+				error: (error) ->
+					throw error
+
+		return no
+
 	Gator(document).on 'keyup', '.' + Traxex.view._.search, (event) ->
 		Traxex.view.search(event.target.value)
 

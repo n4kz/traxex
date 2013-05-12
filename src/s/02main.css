@@ -38,16 +38,34 @@ a:focus {
 	background: #888;
 	float: left;
 	position: relative;
+	width: 100%;
+}
+
+.signin .d-auth {
+	display: block;
+}
+
+.authenticated .d {
 	width: 65%;
+}
+
+.authenticated .d-anchor,
+.authenticated .d-projects {
+	display: inline;
+}
+
+.d-auth {
+	display: none;
 }
 
 .d-anchor, .d-projects {
 	position: absolute;
+	display: none;
 	top: 0.67em;
 	right: 0.67em;
 }
 
-.d-projects{
+.d-projects {
 	top: 1.67em;
 	text-align: right;
 }

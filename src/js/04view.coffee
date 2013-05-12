@@ -44,6 +44,8 @@ set = (node, name, set) ->
 		@inner   = find(@_.inner)[0]
 		@project = find(@_.project)[0]
 
+		@body = document.getElementsByTagName('body')[0]
+
 		find(@_.search)[0].removeAttribute('style')
 
 		return
@@ -54,6 +56,16 @@ set = (node, name, set) ->
 
 	renderProjects: ->
 		@inner.innerHTML = Ulfsaar.projects(list: Object.keys(Traxex.model.projects or {}).sort())
+		return
+
+	auth: (authenticated) ->
+		if authenticated
+			set(@body, 'signin', 0)
+			set(@body, 'authenticated', 1)
+		else
+			set(@body, 'signin', 1)
+			set(@body, 'authenticated', 0)
+
 		return
 
 	# Render filter list

@@ -152,8 +152,6 @@ Commands:
 - types
 
 	},
-
-	auth => 'Get authentication url',
 });
 
 Alleria->focus('message::command' => sub {
@@ -566,18 +564,6 @@ Alleria->focus('message::command' => sub {
 					return message 'Read #help';
 				}
 			}
-		}
-
-		# Authentication
-		when ('auth') {
-			my $secret = md5_hex join ':', $$, $author, time, rand;
-			my $url    = join '/auth?token=', $config->{'host'}, $secret;
-
-			# Save token to redis
-			$redis->setex($keys->{'auth'}. $secret, 3600, $author, sub {});
-
-			# Send auth url back
-			message $url;
 		}
 	}
 });

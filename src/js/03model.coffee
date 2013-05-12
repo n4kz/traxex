@@ -64,7 +64,16 @@ Traxex.model =
 
 	fetchProjects: (callback) ->
 		Traxex.getSubscriptions null, (error, result) =>
-			return alert(error.message) if error
+			auth = yes
+
+			if error
+				if error.code is 3
+					auth = no
+				else
+					return alert(error.message)
+
+			Traxex.view.auth auth
+			return if error
 
 			@projects = {}
 			@projects[project] = yes for project in result.streams

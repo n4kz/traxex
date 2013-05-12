@@ -1,0 +1,81 @@
+.d-persona {
+	color: white;
+	display: inline-block;
+	font-size: 14px;
+	font-weight: bold;
+	overflow: hidden;
+	position: relative;
+	text-decoration: none;
+	text-shadow: 0 1px rgba(0,0,0,0.5), 0 0 2px rgba(0,0,0,0.2);
+	height: 30px;
+
+	background: #3c3c3c;
+	background: -moz-linear-gradient(top, #606060, #3c3c3c);
+	background: -webkit-linear-gradient(top, #606060, #3c3c3c);
+	background: linear-gradient(top, #606060, #3c3c3c);
+
+	border-radius: 3px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.d-persona:hover {
+	background: #2d2d2d;
+	background: -moz-linear-gradient(top, #484848, #2d2d2d);
+	background: -webkit-linear-gradient(top, #484848, #2d2d2d);
+	background: linear-gradient(top, #484848, #2d2d2d);
+}
+
+.d-persona:active,
+.d-persona:focus {
+	top: 1px;
+	box-shadow: none;
+}
+
+.d-persona span {
+	display: inline-block;
+	padding: 5px 10px 5px 40px;
+}
+
+.d-persona span:after {
+	background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAAPCAYAAAA/I0V3AAAA4klEQVR42o2RWaqEMBRE3YaCiDjPwQGcd9CrysLv4wTyoLFD90dxqbp1EgdPRB7Kskznea6Zn/aPoKoqUUrJOI5m4l2QBfSyLHKep1zXZSae3An1fS/7vst931bGkzuhaZrsLVbGkzuheZ7lOI6HyJ2QUkqv6yrbtv0LT+6E7G0UrfBfP3lZlpoXH4ZBmHgn5Pv+KwxDfqp0XQdgJp6c/RsUBIGOokiSJDE/s21bACbe5Ozp0TdAHMdSFIXUdS1N01C2wpObPT36HifwCJzI0iX29Oh7XP0E3CB9L01TzM+i/wePv4ZE5RtAngAAAABJRU5ErkJggg==) 10px center no-repeat;
+	content: '';
+	display: block;
+	width: 31px;
+
+	position: absolute;
+	bottom: 0;
+	left: -3px;
+	top: 0;
+	z-index: 3;
+}
+
+.d-persona:before {
+	content: '';
+	display: block;
+	height: 50px;
+	width: 50px;
+
+	position: absolute;
+	left: -25px;
+	top: 50%;
+	margin-top: -25px;
+	z-index: 2;
+
+	background: #d34f2d;
+	background: -webkit-linear-gradient(top, #ebac45, #d34f2d);
+	background: -moz-linear-gradient(top, #ebac45, #d34f2d);
+	background: linear-gradient(45deg, #d34f2d, #ebac45);
+
+	box-shadow: 1px -1px 2px rgba(0, 0, 0, 0.2);
+	-webkit-transform: rotate(45deg);
+	-moz-transform: rotate(45deg);
+	transform: rotate(45deg);
+}
+
+.d-auth {
+	width: 300px;
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	margin-left: -150px;
+}

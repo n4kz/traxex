@@ -1,6 +1,6 @@
 Traxex = @Traxex
 
-request = (options) ->
+Traxex.request = (options) ->
 	r = new XMLHttpRequest()
 	r.open('POST', options.url)
 	r.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
@@ -26,7 +26,7 @@ request = (options) ->
 
 # Call API method
 call = (method, options, callback) ->
-	request
+	Traxex.request
 		url: '/_?method=' + method
 		data: options || {}
 
