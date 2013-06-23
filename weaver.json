@@ -18,18 +18,8 @@
 			}
 		},
 
-		"auth": {
-			"count": 1,
-			"source": "coffee",
-			"executable": true,
-			"arguments": ["auth.coffee"],
-			"env": {
-				"NODE_PATH": true
-			}
-		},
-
 		"redis": {
-			"count": 1,
+			"count": 0,
 			"source": "redis-cli",
 			"executable": true,
 			"arguments": ["monitor"]
