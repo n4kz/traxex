@@ -1,0 +1,15 @@
+{
+	commands => {
+		'*@example.com' => ['*'],
+	},
+
+	actions => {
+		'*@example.com' => ['*'],
+	},
+
+	roles => {
+		'admin@example.com' => ['admin'],
+	},
+};
+
+# vim: set ft=perl :

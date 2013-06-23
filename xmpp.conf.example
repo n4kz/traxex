@@ -1,0 +1,8 @@
+{
+	password => 's3cur3',
+	hostname => 'example.com',
+	username => 'bot',
+	resource => 'test',
+}
+
+# vim: set ft=perl :
