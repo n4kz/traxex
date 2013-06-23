@@ -3,7 +3,7 @@ all: public/index.html
 # Uglifyjs options
 UGLIFYOPTS=--compress --mangle
 
-CSS=$(wildcard src/s/*.css)
+CSS=$(wildcard src/css/*.css)
 LIB=$(wildcard src/js/lib/*.js)
 SCRIPTS=$(wildcard src/js/*.coffee)
 
