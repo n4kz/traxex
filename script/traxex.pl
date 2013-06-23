@@ -1,4 +1,6 @@
-#!/usr/bin/perl -Ilib -w
+#!/usr/bin/env perl
+use lib 'lib';
+use warnings;
 use Getopt::Long;
 use Alleria;
 use Alleria::Core 'strict';
