@@ -12,7 +12,7 @@ empty = (node) ->
 	return
 
 template = (name, data = {}) ->
-	return render(Ulfsaar[name](data))[0]
+	return render(Stalin[name](data))[0]
 
 each = (name, container, action) ->
 	action.call(element) for element in find(name, container)
@@ -55,7 +55,7 @@ set = (node, name, set) ->
 		return
 
 	renderProjects: ->
-		@inner.innerHTML = Ulfsaar.projects(list: Object.keys(Traxex.model.projects or {}).sort())
+		@inner.innerHTML = Stalin.projects(list: Object.keys(Traxex.model.projects or {}).sort())
 		return
 
 	auth: (authenticated) ->
@@ -163,21 +163,21 @@ set = (node, name, set) ->
 		@inner.replaceChild(template('comments', comments: data), find(@_.comments, @inner)[0])
 		return
 
-Ulfsaar.time = (scope) ->
+Stalin.time = (scope) ->
 	return (new Date(scope('time'))).toLocaleString()
 
-Ulfsaar.body = (scope) ->
+Stalin.body = (scope) ->
 	return render(scope('body'))[0].innerHTML
 
-Ulfsaar 'number', '<a class=action data-action=open:{{id}} href=#{{id}}>#{{id}}</a>'
+Stalin 'number', '<a class=action data-action=open:{{id}} href=#{{id}}>#{{id}}</a>'
 
-Ulfsaar 'filter', '''
+Stalin 'filter', '''
 	<li>
 		<a class=action data-action=render:{{name}} href=javascript:void(0)>{{name}}</a>
 	</li>
 '''
 
-Ulfsaar 'projects', '''
+Stalin 'projects', '''
 	<ul class=d-projects>
 		{{#list}}
 			<li>
@@ -187,7 +187,7 @@ Ulfsaar 'projects', '''
 	</ul>
 '''
 
-Ulfsaar 'header', '''
+Stalin 'header', '''
 	<div class=d-header>
 		<span class=d-header-number>{{>number}}</span>&nbsp;
 		<span class=d-header-name>{{>body}}</span>
@@ -197,7 +197,7 @@ Ulfsaar 'header', '''
 	</div>
 '''
 
-Ulfsaar 'comments', '''
+Stalin 'comments', '''
 	<ul class=d-comments>
 		{{#comments}}
 			<li class=d-comments-comment>
@@ -209,7 +209,7 @@ Ulfsaar 'comments', '''
 	</ul>
 '''
 
-Ulfsaar 'issue', '''
+Stalin 'issue', '''
 	<li class="c-issues-issue {{type}}">
 		<span class=c-issues-issue-number>{{>number}}</span>&nbsp;
 		<span class=c-issues-issue-name>{{>body}}</span>
