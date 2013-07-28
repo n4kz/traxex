@@ -4,8 +4,11 @@ render = (html) ->
 	container.innerHTML = String(html)
 	return container.childNodes
 
-find = (name, container) ->
+get = (name, container) ->
 	return (container or document).getElementsByClassName(name)
+
+find = (name, container) ->
+	return get(name, container)[0]
 
 empty = (node) ->
 	node.innerHTML = ''
@@ -15,7 +18,7 @@ template = (name, data = {}) ->
 	return render(Stalin[name](data))[0]
 
 each = (name, container, action) ->
-	action.call(element) for element in find(name, container)
+	action.call(element) for element in get(name, container)
 	return
 
 set = (node, name, set) ->
@@ -24,29 +27,29 @@ set = (node, name, set) ->
 
 @Traxex.view =
 	_:
-		search       : 'c-search'
-		issues       : 'c-issues'
-		filters      : 'c-filters'
-		project      : 'c-project'
-		issueN       : 'c-issues-issue-'
-		inner        : 'd-inner'
-		comments     : 'd-comments'
+		search   : 'c-search'
+		issues   : 'c-issues'
+		filters  : 'c-filters'
+		project  : 'c-project'
+		issueN   : 'c-issues-issue-'
+		inner    : 'd-inner'
+		comments : 'd-comments'
 
-	current: 0
-	filtered: []
-	hidden: []
-	filter: {}
+	current  : 0
+	filtered : []
+	hidden   : []
+	filter   : {}
 
 	# Prepare view
 	setup: ->
-		@issues  = find(@_.issues)[0]
-		@filters = find(@_.filters)[0]
-		@inner   = find(@_.inner)[0]
-		@project = find(@_.project)[0]
+		@issues  = find(@_.issues)
+		@filters = find(@_.filters)
+		@inner   = find(@_.inner)
+		@project = find(@_.project)
 
 		@body = document.getElementsByTagName('body')[0]
 
-		find(@_.search)[0].removeAttribute('style')
+		set(find(@_.search), 'hidden', 0)
 
 		return
 
@@ -58,13 +61,9 @@ set = (node, name, set) ->
 		@inner.innerHTML = Stalin.projects(list: Object.keys(Traxex.model.projects or {}).sort())
 		return
 
-	auth: (authenticated) ->
-		if authenticated
-			set(@body, 'signin', 0)
-			set(@body, 'authenticated', 1)
-		else
-			set(@body, 'signin', 1)
-			set(@body, 'authenticated', 0)
+	auth: (ok) ->
+		set(@body, 'signin', not ok)
+		set(@body, 'authenticated', ok)
 
 		return
 
@@ -79,7 +78,7 @@ set = (node, name, set) ->
 		empty(@filters)
 
 		for filter in filters
-			@filters.appendChild template 'filter', name: filter
+			@filters.appendChild(template('filter', name: filter))
 
 		return
 
@@ -109,7 +108,7 @@ set = (node, name, set) ->
 		for issue in issues
 			unless issue.node
 				issue.type = @_.issueN + issue.id
-				issue.node = template 'issue', issue
+				issue.node = template('issue', issue)
 				issue.text = issue.node.textContent.toLowerCase()
 
 			set(issue.node, 'selected', issue.id is @current)
@@ -160,7 +159,7 @@ set = (node, name, set) ->
 		data = Traxex.model.comments[@current]
 		return unless data
 
-		@inner.replaceChild(template('comments', comments: data), find(@_.comments, @inner)[0])
+		@inner.replaceChild(template('comments', comments: data), find(@_.comments, @inner))
 		return
 
 Stalin.time = (scope) ->

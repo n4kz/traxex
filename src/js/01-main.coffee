@@ -1,6 +1,6 @@
 Traxex = @Traxex =
-	timer: null
-	project: null
+	timer   : null
+	project : null
 
 	# Update interface
 	update: (changes, initial) ->
@@ -81,6 +81,8 @@ Traxex = @Traxex =
 			@model.fetchComments id, 0, =>
 				@view.update()
 
+		return
+
 Gator(document).on 'readystatechange', ->
 	return if document.readyState isnt 'complete'
 
@@ -113,5 +115,8 @@ Gator(document).on 'readystatechange', ->
 		Traxex.$open(location.hash.slice(1))
 
 	Traxex.view.setup()
+
 	Traxex.model.setup null, ->
 		Traxex.update(yes, yes)
+
+	return

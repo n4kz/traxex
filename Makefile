@@ -1,26 +1,18 @@
 all: public/index.html
 
-# Uglifyjs options
 UGLIFYOPTS=--compress --mangle
 
-CSS=$(wildcard src/css/*.css)
-LIB=$(wildcard src/js/lib/*.js)
-SCRIPTS=$(wildcard src/js/*.coffee)
+public/build.css: src/css/*.css
+	script/minify.pl $^ > public/build.css
 
-DEBUG=
+libs: src/js/lib/*.js
+	cat $^ > public/build.js
 
-ifdef DEBUG
-UGLIFY=cat
-else
-UGLIFY=uglifyjs $(UGLIFYOPTS)
-endif
+coffee: src/js/*.coffee
+	coffee --compile $^
+	cat $(foreach file, $^, $(subst .coffee,.js,$(file))) | uglifyjs $(UGLIFYOPTS) >> public/build.js
 
-public/build.css: $(CSS)
-	script/minify.pl $(CSS) > public/build.css
-
-public/build.js: $(LIB) $(SCRIPTS)
-	cat $(LIB) > public/build.js
-	coffee --compile --lint --print $(SCRIPTS) | $(UGLIFY) >> public/build.js
+public/build.js: libs coffee
 
 public/index.html: src/index.html public/build.css public/build.js
 	cat src/index.html       > public/index.html
